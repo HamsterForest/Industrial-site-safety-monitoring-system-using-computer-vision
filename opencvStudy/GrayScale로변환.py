@@ -1,6 +1,6 @@
 import cv2
 
-img_color=cv2.imread('3.jpg',cv2.IMREAD_COLOR)
+img_color=cv2.imread('opencvStudy/3.jpg',cv2.IMREAD_COLOR)
 
 img_gray=cv2.cvtColor(img_color,cv2.COLOR_BGR2GRAY)
 
