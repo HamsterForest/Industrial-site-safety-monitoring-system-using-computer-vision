@@ -3,16 +3,18 @@ import numpy as np
 
 cap = cv2.VideoCapture(0)
 
-fgbg = cv2.createBackgroundSubtractorMOG2(varThreshold=250)
+fgbg = cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=250,detectShadows=False)
 
+lr=0
 
 while(1):
     ret, frame = cap.read()
-    #블러링은 없앰
+    #가우시안 블러링-엣지검출전 노이즈 제거
+    blur=cv2.GaussianBlur(frame,(15,15),5)
     #전경마스크 얻기
-    fgmask=fgbg.apply(frame)
+    fgmask=fgbg.apply(blur,learningRate=lr)
     #모폴로지-타원형 커널
-    kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(20,20))
+    kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(51,51))
     #모폴로지-클로징-흰색영역의 검은색 구멍을 메운다
     fgmask=cv2.morphologyEx(fgmask,cv2.MORPH_CLOSE,kernel)
 
@@ -35,7 +37,7 @@ while(1):
             cv2.circle(frame, (centerX, centerY), 1, (0, 255, 0), 2)#중심부 추적
             cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 0, 255))
 
-    cv2.putText(frame,count_boxes,(0,0),cv2.FONT_HERSHEY_SIMPLEX,3.5,(0,0,255),thickness=2)
+    cv2.putText(frame,str(count_boxes),(50,50),cv2.FONT_HERSHEY_SIMPLEX,1,(0,0,255),thickness=1)
     cv2.imshow('mask',fgmask)
     cv2.imshow('frame',frame)
 
@@ -43,7 +45,11 @@ while(1):
     if k == 27:
         break
     if k == ord('r'): #리셋
-        fgbg=cv2.createBackgroundSubtractorMOG2(varThreshold=100)
+        fgbg=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=250,detectShadows=False)
+    if k == ord('l'): #러닝레이트 초기화=>갑작스러운 움직임 만 검출
+        lr=-1
+    if k == ord('o'): #본질적으로 모든 움직임 기록
+        lr=0
 
 cap.release()
 cv2.destroyAllWindows()
