@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 
 image = cv2.imread('opencvStudy/3.jpg')
+image2 = image.copy()
+blur_bycv = cv2.blur(image2,(5,5))
 
 height, width, channels = image.shape
 
@@ -42,5 +44,6 @@ for y in range(kernel_size//2, height-kernel_size//2):
         blurred_image[y, x] = blurred_value
 
 cv2.imshow('original Image', image)
+cv2.imshow('blur_by_cv2',blur_bycv)
 cv2.imshow('blurred Image', blurred_image)
 cv2.waitKey(0)

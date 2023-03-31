@@ -48,10 +48,13 @@ def erosion(img, kernel_size):
     return output
 
 #그레이스케일로 불러온다.
-img = cv2.imread('opencvStudy/3.jpg', cv2.IMREAD_GRAYSCALE)
+image = cv2.imread('opencvStudy/3.jpg', cv2.IMREAD_GRAYSCALE)
+image2 = image.copy()
+eroded_by_cv2 = cv2.morphologyEx(image2, cv2.MORPH_ERODE,kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(7,7)))
+eroded_img = erosion(image, 7)
 
-eroded_img = erosion(img, 7)
-
+cv2.imshow('Original Image', image)
+cv2.imshow('Eroded by cv2', eroded_by_cv2)
 cv2.imshow('Eroded Image', eroded_img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
