@@ -15,7 +15,6 @@ for y in range(height):
         #업데이트
         image1[y, x] = [blue, green, red]
 
-# Display the new image
 cv2.imshow('New Image', image1)
 cv2.waitKey(0)
 
@@ -27,7 +26,6 @@ for y in range(height):
         #업데이트
         image2[y, x] = [blue, green, red]
 
-# Display the new image
 cv2.imshow('New Image', image2)
 cv2.waitKey(0)
 
@@ -39,7 +37,6 @@ for y in range(height):
         #업데이트
         image3[y, x] = [blue, green, red]
 
-# Display the new image
 cv2.imshow('New Image', image3)
 cv2.waitKey(0)
 
