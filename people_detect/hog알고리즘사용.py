@@ -3,7 +3,7 @@ import cv2
 import sys
 import random
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('people_detect/vtest.avi')
 
 if not cap.isOpened():
     print('Video open failed!')

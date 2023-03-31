@@ -7,7 +7,7 @@ face_cascade = cv2.CascadeClassifier('haarcascade_fullbody.xml')
 bg_subtractor = cv2.createBackgroundSubtractorMOG2()
 
 # Open a video capture object and start reading frames
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('people_detect/vtest.avi')
 
 # Define a variable to keep track of the number of people
 num_people = 0
