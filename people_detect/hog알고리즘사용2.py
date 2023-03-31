@@ -3,7 +3,7 @@ import numpy as np
 from imutils.object_detection import non_max_suppression
 import sys
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('people_detect/vtest.avi')
 
 if not cap.isOpened():
     print('Video open failed!')
