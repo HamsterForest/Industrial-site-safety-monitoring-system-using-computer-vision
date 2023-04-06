@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 # yolo 로드
-net = cv2.dnn.readNet("people_detect/using_yolo/yolov3.weights", "people_detect/using_yolo/yolov3.cfg")
+net = cv2.dnn.readNet("weight_files_folder/yolov3.weights", "people_detect/using_yolo/yolov3.cfg")
 
 # Get output layer names
 layer_names = net.getLayerNames()

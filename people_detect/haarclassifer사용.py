@@ -1,7 +1,7 @@
 import cv2
 
 # Load the Haar Cascade Classifier for detecting people
-face_cascade = cv2.CascadeClassifier('haarcascade_fullbody.xml')
+face_cascade = cv2.CascadeClassifier('people_detect/haarcascade_fullbody.xml')
 
 # Create a background subtractor object
 bg_subtractor = cv2.createBackgroundSubtractorMOG2()
