@@ -10,7 +10,7 @@ layer_names = net.getLayerNames()
 output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers() if isinstance(i, list)]
 
 # 비디오 업로드
-cap = cv2.VideoCapture('people_detect/vtest.avi')
+cap = cv2.VideoCapture('videos/vtest2.mp4')
 
 # Define classes
 classes = []

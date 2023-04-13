@@ -1,9 +1,9 @@
-
 import cv2
 import sys
 import random
 
-cap = cv2.VideoCapture('people_detect/vtest.avi')
+# 동영상 불러오기
+cap = cv2.VideoCapture('videos/vtest2.mp4')
 
 if not cap.isOpened():
     print('Video open failed!')
