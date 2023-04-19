@@ -34,7 +34,9 @@ while True:
     
     if not ret:
         break
-        
+    
+    frame = cv2.resize(frame, (640, 480))
+
     Detector(frame)
 
     if cv2.waitKey(10) == 27:
