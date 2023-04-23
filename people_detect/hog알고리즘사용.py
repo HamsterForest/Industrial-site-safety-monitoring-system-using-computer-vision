@@ -4,7 +4,7 @@ import random
 from imutils.object_detection import non_max_suppression
 
 # 동영상 불러오기
-cap = cv2.VideoCapture('videos/vtest.avi')
+cap = cv2.VideoCapture('videos/vtest3.mp4')
 
 if not cap.isOpened():
     print('Video open failed!')

@@ -1,2 +1,5 @@
 *.weights
 *.mp4
+*.pt
+*.jpg
+*.png
