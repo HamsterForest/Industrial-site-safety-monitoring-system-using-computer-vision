@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import time
+import os
 
 # yolo 로드
 net = cv2.dnn.readNet("weight_files_folder/yolov3_1/yolov3.weights", "weight_files_folder/yolov3_1/yolov3.cfg")
@@ -11,7 +12,7 @@ layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
 # 비디오 업로드
-cap = cv2.VideoCapture('videos/vtest4.mp4')
+cap = cv2.VideoCapture('videos/vtest.avi')
 
 
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
