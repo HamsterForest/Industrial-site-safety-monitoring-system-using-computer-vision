@@ -29,14 +29,15 @@ thickness = 2
 
 #yolo term 조절
 prev_time=0
-term=15 # term 조절 변수는 여기
+term=1 # term 조절 변수는 여기
 initial_flag=True
 
 #모니터링 좌표 지정 비디오 사이즈는 640, 480 으로 고정 
-pt1 = (50, 50)
-pt2 = (400, 300)
+pt1 = (400, 100)
+pt2 = (580, 400)
 
 #사용자 설정 모니터링 범위를 위해 프레임을 지정된 크기로 자른다.
+user_flag = -1
 def cut_frame(frame, pt1, pt2):
     
     x1, y1 = pt1
@@ -44,7 +45,7 @@ def cut_frame(frame, pt1, pt2):
     
     return frame[y1:y2, x1:x2]
 
-def yolo(frame):
+def yolo(frame, pt1, pt2):
     #지정된 사이즈로 프레임 자르기
     frame = cut_frame(frame, pt1, pt2)
     
@@ -78,7 +79,7 @@ def yolo(frame):
     
     return idxs, boxes
 
-def drawing(frame, idxs, boxes, term): 
+def drawing(frame, idxs, boxes, term, pt1, pt2): 
     # 그릴때, 잘려진 사진을 이용해 yolo를 했음을 고려하여, 좌표를 조정해야 한다.
     # 사람 수 세기
     people_count=len(idxs)
@@ -117,19 +118,28 @@ while True:
     #yolo term 조절
     if initial_flag==True:
         prev_time = time.time()
-        idxs, boxes  = yolo(frame)
+        if user_flag == 1:
+            idxs, boxes  = yolo(frame, pt1, pt2)
+        else:
+            idxs, boxes  = yolo(frame, (0,0), (640,480))
         initial_flag=False
 
     lapsed_time = time.time() - prev_time
     if lapsed_time > (1./ term):
         initial_flag=True
 
-    frame = drawing(frame, idxs, boxes, term)
-
+    if user_flag == 1:
+        frame = drawing(frame, idxs, boxes, term, pt1, pt2)
+    else:
+        frame = drawing(frame, idxs, boxes, term, (0,0), (640,480))
+    
     cv2.imshow('Frame', frame)
 
-    if cv2.waitKey(25) & 0xFF == ord('q'):
+    keycode=cv2.waitKey(25)
+    if keycode == ord('q'):
         break
+    elif keycode == ord('u'):
+        user_flag=user_flag*-1
 
 cap.release()
 cv2.destroyAllWindows()
