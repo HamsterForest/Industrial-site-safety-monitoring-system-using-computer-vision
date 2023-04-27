@@ -20,17 +20,34 @@ with open("weight_files_folder/yolov3_1/coco.names", "r") as f:#.namses => 알�
 
 #영상에 글자를 넣기 위한 사전 설정
 font = cv2.FONT_HERSHEY_SIMPLEX
-org = (50, 50)
+org = (50, 50) # 글자 시작지점 글자의 왼쪽 하단
+org_back = (org[0]-20, org[1]-25) # 글자 배경을 위한 사각형 시작 좌표
+org_back2 = (org[0]+200, org[1]+5)
 font_scale = 1
-color = (255, 0, 0)
+color = (255, 255, 255)
 thickness = 2
 
 #yolo term 조절
 prev_time=0
-term=2 # term 조절 변수는 여기
+term=15 # term 조절 변수는 여기
 initial_flag=True
 
+#모니터링 좌표 지정 비디오 사이즈는 640, 480 으로 고정 
+pt1 = (50, 50)
+pt2 = (400, 300)
+
+#사용자 설정 모니터링 범위를 위해 프레임을 지정된 크기로 자른다.
+def cut_frame(frame, pt1, pt2):
+    
+    x1, y1 = pt1
+    x2, y2 = pt2
+    
+    return frame[y1:y2, x1:x2]
+
 def yolo(frame):
+    #지정된 사이즈로 프레임 자르기
+    frame = cut_frame(frame, pt1, pt2)
+    
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
     # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
@@ -59,24 +76,33 @@ def yolo(frame):
     # 중복되는 상자제거 필터링 NMS
     idxs = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
     
-    return frame, idxs, boxes
+    return idxs, boxes
 
-def drawing(frame, idxs, boxes, update_flag):
+def drawing(frame, idxs, boxes, term): 
+    # 그릴때, 잘려진 사진을 이용해 yolo를 했음을 고려하여, 좌표를 조정해야 한다.
     # 사람 수 세기
     people_count=len(idxs)
 
-    if update_flag == True:
-        if people_count>0:
-            for i in idxs.flatten():
-                box=boxes[i]
-                left=box[0]
-                top=box[1]
-                w=box[2]
-                h=box[3]
-                cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
 
-    cv2.putText(frame, 'People Count: {}'.format(people_count), org, font, 
+    if people_count>0:
+        for i in idxs.flatten():
+            box=boxes[i]
+            left=box[0]
+            top=box[1]
+            w=box[2]
+            h=box[3]
+            if term>8:
+                cv2.rectangle(frame, (left+pt1[0], top+pt1[1]), (left+w+pt1[0], top+h+pt1[1]), (0, 255, 0), 2)
+    
+    #모니터링 범위는 사각형으로 표시 된다.
+    cv2.rectangle(frame, pt1, pt2, (255, 255, 255), 2)
+
+    #사람수 text배경 -검은색
+    cv2.rectangle(frame, org_back, org_back2, (0, 0, 0), -1)
+    #사람수 text - 흰색
+    cv2.putText(frame, 'People : {}'.format(people_count), org, font, 
                 font_scale, color, thickness, cv2.LINE_AA)
+
     
     return frame
 
@@ -91,16 +117,14 @@ while True:
     #yolo term 조절
     if initial_flag==True:
         prev_time = time.time()
-        frame, idxs, boxes  = yolo(frame)
-        update_flag=True
+        idxs, boxes  = yolo(frame)
         initial_flag=False
 
     lapsed_time = time.time() - prev_time
     if lapsed_time > (1./ term):
         initial_flag=True
 
-    frame = drawing(frame, idxs, boxes, update_flag)
-    update_flag = False
+    frame = drawing(frame, idxs, boxes, term)
 
     cv2.imshow('Frame', frame)
 
