@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import time
-import os
 
 # yolo 로드
 net = cv2.dnn.readNet("weight_files_folder/yolov3_1/yolov3.weights", "weight_files_folder/yolov3_1/yolov3.cfg")
@@ -19,8 +18,6 @@ classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
 with open("weight_files_folder/yolov3_1/coco.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
     classes = [line.strip() for line in f.readlines()]
 
-people_count = 0
-
 #영상에 글자를 넣기 위한 사전 설정
 font = cv2.FONT_HERSHEY_SIMPLEX
 org = (50, 50)
@@ -28,28 +25,12 @@ font_scale = 1
 color = (255, 0, 0)
 thickness = 2
 
-#fps 조절
+#yolo term 조절
 prev_time=0
-FPS=90
+term=2 # term 조절 변수는 여기
 initial_flag=True
 
-while True:
-    #fps 조절
-    if initial_flag==True:
-        ret, frame = cap.read()
-        initial_flag=False
-
-    current_time = time.time() - prev_time
-    if current_time > 1./ FPS:
-        prev_time = time.time()
-        ret, frame = cap.read()
-
-    if not ret:
-        break
-    
-    frame = cv2.resize(frame, (640, 480))
-    people_count = 0
-    
+def yolo(frame):
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
     # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
@@ -74,25 +55,56 @@ while True:
                 left, top, w, h = int(left - w/2), int(top - h/2), int(w), int(h)
                 confidences.append(float(confidence))
                 boxes.append([left,top,w,h])
-
-    # 중복되는 상자제거 필터링
+    
+    # 중복되는 상자제거 필터링 NMS
     idxs = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+    
+    return frame, idxs, boxes
 
-    if len(idxs)>0:
-        for i in idxs.flatten():
-            people_count+=1
-            box=boxes[i]
-            left=box[0]
-            top=box[1]
-            w=box[2]
-            h=box[3]
-            cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
+def drawing(frame, idxs, boxes, update_flag):
+    # 사람 수 세기
+    people_count=len(idxs)
+
+    if update_flag == True:
+        if people_count>0:
+            for i in idxs.flatten():
+                box=boxes[i]
+                left=box[0]
+                top=box[1]
+                w=box[2]
+                h=box[3]
+                cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
 
     cv2.putText(frame, 'People Count: {}'.format(people_count), org, font, 
                 font_scale, color, thickness, cv2.LINE_AA)
+    
+    return frame
+
+while True:
+    ret, frame = cap.read()
+
+    if not ret:
+        break
+
+    frame = cv2.resize(frame, (640, 480))
+
+    #yolo term 조절
+    if initial_flag==True:
+        prev_time = time.time()
+        frame, idxs, boxes  = yolo(frame)
+        update_flag=True
+        initial_flag=False
+
+    lapsed_time = time.time() - prev_time
+    if lapsed_time > (1./ term):
+        initial_flag=True
+
+    frame = drawing(frame, idxs, boxes, update_flag)
+    update_flag = False
 
     cv2.imshow('Frame', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+
+    if cv2.waitKey(25) & 0xFF == ord('q'):
         break
 
 cap.release()
