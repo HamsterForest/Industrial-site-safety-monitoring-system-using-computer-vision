@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 # yolo 로드
-net = cv2.dnn.readNet("weight_files_folder/yolov3_1/yolov3.weights", "weight_files_folder/yolov3_1/yolov3.cfg")
+net = cv2.dnn.readNet("weight_files_folder/cocodata/yolov3.weights", "weight_files_folder/cocodata/yolov3.cfg")
 #.weights => 훈련된 모델 파일, .cfg => 알고리즘 구성 파일
 
 #output layer선언- 모든 레이어를 불러온 후 unconnected layer즉, output layer만 추린다.
@@ -15,8 +15,12 @@ cap = cv2.VideoCapture('videos/vtest.avi')
 
 
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
-with open("weight_files_folder/yolov3_1/coco.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
+with open("weight_files_folder/cocodata/coco.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
     classes = [line.strip() for line in f.readlines()]
+
+#마우스 드래그를 위한 것
+isDragging = False
+x0_m, y0_m, w_m, h_m = -1, -1, -1, -1
 
 #영상에 글자를 넣기 위한 사전 설정
 font = cv2.FONT_HERSHEY_SIMPLEX
@@ -29,12 +33,8 @@ thickness = 2
 
 #yolo term 조절
 prev_time=0
-term=1 # term 조절 변수는 여기
+term=10 # term 조절 변수는 여기
 initial_flag=True
-
-#모니터링 좌표 지정 비디오 사이즈는 640, 480 으로 고정 
-pt1 = (400, 100)
-pt2 = (580, 400)
 
 #사용자 설정 모니터링 범위를 위해 프레임을 지정된 크기로 자른다.
 user_flag = -1
@@ -44,6 +44,26 @@ def cut_frame(frame, pt1, pt2):
     x2, y2 = pt2
     
     return frame[y1:y2, x1:x2]
+
+#사용자 마우스 드래그
+def onMouse(event, x, y, flags, param):
+    global isDragging, x0_m, y0_m, w_m, h_m, user_flag
+    if event == cv2.EVENT_LBUTTONDOWN:
+        user_flag=1
+        isDragging = True
+        x0_m = x
+        y0_m = y
+        w_m = 0
+        h_m = 0
+    elif event == cv2.EVENT_MOUSEMOVE:
+        if isDragging:
+            w_m = x - x0_m
+            h_m = y - y0_m
+    elif event == cv2.EVENT_LBUTTONUP:
+        if isDragging:
+            isDragging = False
+            w_m = x - x0_m
+            h_m = y - y0_m
 
 def yolo(frame, pt1, pt2):
     #지정된 사이즈로 프레임 자르기
@@ -94,20 +114,13 @@ def drawing(frame, idxs, boxes, term, pt1, pt2):
             h=box[3]
             if term>8:
                 cv2.rectangle(frame, (left+pt1[0], top+pt1[1]), (left+w+pt1[0], top+h+pt1[1]), (0, 255, 0), 2)
-    
-    #모니터링 범위는 사각형으로 표시 된다.
-    cv2.rectangle(frame, pt1, pt2, (255, 255, 255), 2)
-
-    #사람수 text배경 -검은색
-    cv2.rectangle(frame, org_back, org_back2, (0, 0, 0), -1)
-    #사람수 text - 흰색
-    cv2.putText(frame, 'People : {}'.format(people_count), org, font, 
-                font_scale, color, thickness, cv2.LINE_AA)
-
-    
     return frame
 
 while True:
+    #사용자 지정 범위의 변수선언
+    pt1=(x0_m,y0_m)
+    pt2=(x0_m+w_m,y0_m+h_m)
+    
     ret, frame = cap.read()
 
     if not ret:
@@ -115,31 +128,56 @@ while True:
 
     frame = cv2.resize(frame, (640, 480))
 
+    #사용자 지정 범위 
+    cv2.imshow('frame', frame)
+
+    cv2.setMouseCallback('frame', onMouse)
+
+    if w_m>0 and h_m>0 and user_flag==1:
+        if w_m<100 or h_m<100: # 작은 사각형은 다른 색 사용
+            cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
+        else:
+            cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+        if isDragging==False and (w_m<100 or h_m<100): # 최종적으로 너무 작은 상자가 그려지면 지워짐
+            w_m=0
+            h_m=0
+        
+   
     #yolo term 조절
     if initial_flag==True:
         prev_time = time.time()
-        if user_flag == 1:
-            idxs, boxes  = yolo(frame, pt1, pt2)
-        else:
-            idxs, boxes  = yolo(frame, (0,0), (640,480))
+        if isDragging==False or( isDragging==True and (w_m<0 and h_m<0)):# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+            if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                idxs, boxes  = yolo(frame, pt1, pt2)
+            else:
+                idxs, boxes  = yolo(frame, (0,0), (640,480))
         initial_flag=False
+
+    #사람수 표시는 항상 그린다.
+    #사람수 text배경 -검은색
+    cv2.rectangle(frame, org_back, org_back2, (0, 0, 0), -1)
+    cv2.putText(frame, 'People : {}'.format(len(idxs)), org, font, 
+                font_scale, color, thickness, cv2.LINE_AA)
+    
 
     lapsed_time = time.time() - prev_time
     if lapsed_time > (1./ term):
         initial_flag=True
 
-    if user_flag == 1:
-        frame = drawing(frame, idxs, boxes, term, pt1, pt2)
-    else:
-        frame = drawing(frame, idxs, boxes, term, (0,0), (640,480))
+    #사람들 사각형 바운더리 그리기
+    if isDragging == False or( isDragging==True and (w_m<0 and h_m<0)):# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+        if user_flag == 1 and w_m>100 and h_m>100:# 사각형이 너무 작으면, 전체 모니터링 수행
+            frame = drawing(frame, idxs, boxes, term, pt1, pt2)
+        else:
+            frame = drawing(frame, idxs, boxes, term, (0,0), (640,480))
     
-    cv2.imshow('Frame', frame)
+    cv2.imshow('frame', frame)
 
     keycode=cv2.waitKey(25)
     if keycode == ord('q'):
         break
-    elif keycode == ord('u'):
-        user_flag=user_flag*-1
+    elif keycode == ord('u'):# 사용자 지정 범위 끄기
+        user_flag=-1
 
 cap.release()
 cv2.destroyAllWindows()
