@@ -38,7 +38,6 @@ caut_color = (255, 255, 255)
 caut_thickness = 1
 #yolo term 조절
 prev_time=0
-term=1 # term 조절 변수는 여기
 initial_flag=True
 
 #사용자 설정 모니터링 범위를 위해 프레임을 지정된 크기로 자른다.
@@ -130,12 +129,12 @@ def draw_caution(frame, idxs):
     return frame
 
 #작업인원수모니터링
-def workers_counts_monitoring(num):#num은 할당 인원수
+def workers_counts_monitoring(num, term):#num은 할당 인원수
     # 비디오 업로드
     cap = cv2.VideoCapture('videos/vtest.avi')
     root.withdraw()#인터페이스 숨기기
  
-    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, term, initial_flag, user_flag
+    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
     while True:
         #사용자 지정 범위의 변수선언
         pt1=(x0_m,y0_m)
@@ -205,17 +204,16 @@ def workers_counts_monitoring(num):#num은 할당 인원수
     root.deiconify()#인터페이스 다시 등장
 
 #메인루프
-def main_loop(btn,num):
-    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, term, initial_flag, user_flag
+def main_loop(btn,num1,num2):
+    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
     #전역변수 초기화
     isDragging = False
     x0_m, y0_m, w_m, h_m = -1, -1, -1, -1
     prev_time=0
-    term=1
     initial_flag=True
     user_flag = -1
     if btn==2:
-        workers_counts_monitoring(num)
+        workers_counts_monitoring(num1,num2)
 
 def bck_btn():
     for widget in root.winfo_children():
@@ -233,14 +231,25 @@ def second_btn():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
     button4.place(x=30, y=30, width=60, height=30)
-    scale = tk.Scale(root, from_=2, to=10,orient="horizontal", length=200)
-    label1 = tk.Label(root,text='할당인원 수 설정 : ').place(x=50, y=200)
-    label2 = tk.Label(root,text='[작업인원수 모니터링]').place(x=50, y=80)
-    label3 = tk.Label(root,text='1. 할당인원 수를 입력하면, 할당인원수에 미달 할 때 경고 합니다.').place(x=50, y=110)
-    label4 = tk.Label(root,text='2. 할당인원 수는 2명 이상 10명 이하로 설정 할 수 있습니다.').place(x=50, y=140)
-    scale.place(x=160, y=180,)
-    button5 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(2,scale.get()))
-    button5.place(x=30, y=270, width=150, height=50)
+    tk.Label(root,text='[작업인원수 모니터링]').place(x=50, y=80)
+    tk.Label(root,text='1. 할당인원 수를 입력하면, 할당인원수에 미달 할 때 경고 합니다.').place(x=50, y=110)
+    tk.Label(root,text='2. 할당인원 수는 2명 이상 10명 이하로 설정 할 수 있습니다.').place(x=50, y=140)
+    
+    tk.Label(root,text='할당인원 수 설정 : ').place(x=50, y=190)
+    scale1 = tk.Scale(root, from_=2, to=10,orient="horizontal", length=200)
+    scale1.place(x=160, y=170,)
+    
+    tk.Label(root,text='3. 사용자 기기의 성능에 따라 모니터링 빈도를 조절하세요.').place(x=50, y=240)
+    tk.Label(root,text='4. 예를들어 10을 설정하면, 1초에 10번 모니터링 하게 됩니다.').place(x=50, y=270)
+    tk.Label(root,text='5. 8보다 작은 경우, 사람의 경계를 표시하는 바운더리 박스가 그려지지 않습니다.').place(x=50, y=300)
+
+    tk.Label(root,text='모니터링 빈도 : ').place(x=50, y=350)
+    scale2 = tk.Scale(root, from_=1, to=60,orient="horizontal", length=300)
+    scale2.set(10)
+    scale2.place(x=160, y=330,)
+    
+    button5 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(2,scale1.get(),scale2.get()))
+    button5.place(x=450, y=200, width=150, height=50)
 
 #인터페이스 정의
 root = tk.Tk()
