@@ -10,7 +10,7 @@ net = cv2.dnn.readNet("weight_files_folder/trafficcone/yolov3.weights", "weight_
 layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
-img_color=cv2.imread('videos/trafficcone8.jpg',cv2.IMREAD_COLOR)
+img_color=cv2.imread('videos/trafficcone.jpg',cv2.IMREAD_COLOR)
 
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
 with open("weight_files_folder/trafficcone/obj.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음

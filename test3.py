@@ -1,53 +1,31 @@
+import tkinter as tk
 import cv2
- 
-isDragging = False
-x0, y0, w, h = -1, -1, -1, -1
-blue, red = (255, 0, 0), (0, 0, 255)
- 
-def onMouse(event, x, y, flags, param):
-    print('hello')
-    global isDragging, x0, y0, w, h
-    if event == cv2.EVENT_LBUTTONDOWN:
-        isDragging = True
-        x0 = x
-        y0 = y
-        w = 0
-        h = 0
-    elif event == cv2.EVENT_MOUSEMOVE:
-        if isDragging:
-            w = x - x0
-            h = y - y0
-    elif event == cv2.EVENT_LBUTTONUP:
-        if isDragging:
-            isDragging = False
-            w = x - x0
-            h = y - y0
+
+def show_image():
+    root.withdraw() # Hide the root window
+    img_color = cv2.imread('videos/trafficcone.jpg', cv2.IMREAD_COLOR)
+    cv2.imshow('Frame', img_color)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    root.deiconify() # Show the root window after cv2 window is closed
     
 
-cap = cv2.VideoCapture('videos/vtest.avi')
+# Create the main window
+root = tk.Tk()
+root.title("Monitoring system")
+root.geometry("640x400")
+root.resizable(False, False)
 
-while True:
-    ret, frame = cap.read()
+# Create the buttons
+button1 = tk.Button(root, text="접근금지구역 모니터링", command=show_image)
+button2 = tk.Button(root, text="작업인원수 모니터링")
+button3 = tk.Button(root, text="적치물 제한 구역 모니터링")
 
-    if not ret:
-        break
+# Place the buttons in the window
+button1.place(x=50, y=70, width=250, height=50)
+button2.place(x=50, y=170, width=250, height=50)
+button3.place(x=50, y=270, width=250, height=50)
 
-    frame = cv2.resize(frame, (640, 480))
+# Run the GUI
+root.mainloop()
 
-    cv2.imshow('frame', frame)
-
-    cv2.setMouseCallback('frame', onMouse)
-
-    if w>0 and h>0:
-        cv2.rectangle(frame, (x0,y0), (x0+w,y0+h), (0, 255, 0), 2)
-    
-    cv2.imshow('frame', frame)
-
-    keycode=cv2.waitKey(25)
-    if keycode == ord('q'):
-        break
-
-
-cap.release()
-cv2.destroyAllWindows()
-        
