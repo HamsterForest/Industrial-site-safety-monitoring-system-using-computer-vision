@@ -2,8 +2,9 @@ import cv2
 import numpy as np
 import time
 import tkinter as tk #인터페이스
+#----------------------------------------------------------------------------------------------------#
 
-# yolo 로드
+# yolo 로드=========================================
 net = cv2.dnn.readNet("weight_files_folder/cocodata/yolov3.weights", "weight_files_folder/cocodata/yolov3.cfg")
 #.weights => 훈련된 모델 파일, .cfg => 알고리즘 구성 파일
 
@@ -11,10 +12,23 @@ net = cv2.dnn.readNet("weight_files_folder/cocodata/yolov3.weights", "weight_fil
 layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
-
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
 with open("weight_files_folder/cocodata/coco.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
     classes = [line.strip() for line in f.readlines()]
+# yolo 로드=========================================
+
+# yolo 라바콘 로드 =================================
+net_t = cv2.dnn.readNet("weight_files_folder/trafficcone/yolov3.weights", "weight_files_folder/trafficcone/yolov3.cfg")
+#.weights => 훈련된 모델 파일, .cfg => 알고리즘 구성 파일
+
+#output layer선언- 모든 레이어를 불러온 후 unconnected layer즉, output layer만 추린다.
+layer_names_t = net_t.getLayerNames()
+output_layers_t = [layer_names_t[i - 1] for i in net_t.getUnconnectedOutLayers()]
+
+classes_t = []#감지 할 수 있는 모든 객체 명이 들어간다.
+with open("weight_files_folder/trafficcone/obj.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
+    classes_t = [line.strip() for line in f.readlines()]
+# yolo 라바콘 로드 =================================
 
 #마우스 드래그를 위한 것
 isDragging = False
@@ -42,6 +56,20 @@ initial_flag=True
 
 #사용자 설정 모니터링 범위를 위해 프레임을 지정된 크기로 자른다.
 user_flag = -1
+
+#-----------------------------------------------------------------------------------------------------#
+#cut_frame
+#onMouse
+#yolo
+#drawing
+#draw_caution
+#auto_boundary
+#workers_counts_monitoring
+#main_loop
+#bck_btn
+#second_btn
+#second_btn2
+
 def cut_frame(frame, pt1, pt2):
     
     x1, y1 = pt1
@@ -76,7 +104,7 @@ def yolo(frame, pt1, pt2):
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
     # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
-    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(160, 160), 
+    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(320, 320), 
                                  mean=(0, 0, 0), swapRB=True, crop=False)
     net.setInput(blob)
     outputs = net.forward(output_layers)
@@ -128,14 +156,31 @@ def draw_caution(frame, idxs):
                 caut_font_scale, caut_color, caut_thickness, cv2.LINE_AA)
     return frame
 
+#범위자동설정
+def auto_boundary():
+    #10초동안 실행할것
+    #yolo term 기능과 연동되게 할것
+    #바운더리사각형을 반환할것
+    pass
+
 #작업인원수모니터링
 def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
     # 비디오 업로드
     cap = cv2.VideoCapture('videos/vtest.avi')
     root.withdraw()#인터페이스 숨기기
- 
+    #isDragging => 마우스를 드래그 중인가
+    #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
+    #prev_time => yolo term 관련
+    #initial_flag => initial_flag가 1일 때만 욜로를 진행한다. yolo term과 관련됨.
+    #usef_flag => 1이면 사용자지정범위가 켜진다.
     global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
     while True:
+        #자동범위조정
+        if auto_range==1:
+            user_flag=-1#사용자지정범위 끄기
+
+        people_count=0
+
         #사용자 지정 범위의 변수선언
         pt1=(x0_m,y0_m)
         pt2=(x0_m+w_m,y0_m+h_m)
@@ -161,24 +206,31 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
                 h_m=0
             
     
-        #yolo term 조절
+        #yolo term 조절, yolo 진입
         if initial_flag==True:
             prev_time = time.time()
-            if isDragging==False or( isDragging==True and (w_m<0 and h_m<0)):# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+            if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
                 if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
                     idxs, boxes  = yolo(frame, pt1, pt2)
+                    people_count=len(idxs)
                 else:
                     idxs, boxes  = yolo(frame, (0,0), (640,480))
+                    people_count=len(idxs)
             initial_flag=False
 
         #사람수 표시는 항상 그린다.
         #사람수 text배경 -검은색
-        cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
-        cv2.putText(frame, 'Allocated : {} Count : {}'.format(num,len(idxs)), count_cor, font, 
-                    count_font_scale, count_color, count_thickness, cv2.LINE_AA)
+        if auto_range!=1:
+            cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
+            cv2.putText(frame, 'Allocated : {} Count : {}'.format(num,people_count), count_cor, font, 
+                        count_font_scale, count_color, count_thickness, cv2.LINE_AA)
+        else:#자동 범위 설정중일 경우
+            cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
+            cv2.putText(frame, 'Detecting Traffic cone', count_cor, font, 
+                        count_font_scale, count_color, count_thickness, cv2.LINE_AA)
         
         #사람수 확인 및 경고 표현
-        if len(idxs)<num:
+        if people_count<num and auto_range!=1:
             frame=draw_caution(frame, idxs)
 
         lapsed_time = time.time() - prev_time
@@ -186,7 +238,7 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
             initial_flag=True
 
         #사람들 사각형 바운더리 그리기
-        if isDragging == False or( isDragging==True and (w_m<0 and h_m<0)):# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
             if user_flag == 1 and w_m>100 and h_m>100:# 사각형이 너무 작으면, 전체 모니터링 수행
                 frame = drawing(frame, idxs, boxes, term, pt1, pt2)
             else:
@@ -199,6 +251,8 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
             break
         elif keycode == ord('u'):# 사용자 지정 범위 끄기
             user_flag=-1
+        elif keycode == ord('r'):# 자동범위조정 진입
+            pass
     cap.release()
     cv2.destroyAllWindows()
     root.deiconify()#인터페이스 다시 등장
