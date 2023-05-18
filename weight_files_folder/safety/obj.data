@@ -1,0 +1,5 @@
+classes= 10
+train  = data/safety/train.txt
+valid  = data/safety/test.txt
+names = data/safety/obj.names
+backup = data/safety/result

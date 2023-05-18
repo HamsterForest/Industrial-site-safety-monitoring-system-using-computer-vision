@@ -76,7 +76,7 @@ def yolo(frame, pt1, pt2):
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
     # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
-    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(320, 320), 
+    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(160, 160), 
                                  mean=(0, 0, 0), swapRB=True, crop=False)
     net.setInput(blob)
     outputs = net.forward(output_layers)
@@ -129,7 +129,7 @@ def draw_caution(frame, idxs):
     return frame
 
 #작업인원수모니터링
-def workers_counts_monitoring(num, term):#num은 할당 인원수
+def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
     # 비디오 업로드
     cap = cv2.VideoCapture('videos/vtest.avi')
     root.withdraw()#인터페이스 숨기기
@@ -195,7 +195,7 @@ def workers_counts_monitoring(num, term):#num은 할당 인원수
         cv2.imshow('frame', frame)
 
         keycode=cv2.waitKey(25)
-        if keycode == ord('q'):
+        if keycode == 27:#esc키 종료
             break
         elif keycode == ord('u'):# 사용자 지정 범위 끄기
             user_flag=-1
@@ -204,7 +204,7 @@ def workers_counts_monitoring(num, term):#num은 할당 인원수
     root.deiconify()#인터페이스 다시 등장
 
 #메인루프
-def main_loop(btn,num1,num2):
+def main_loop(btn,num1,num2,auto_range):
     global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
     #전역변수 초기화
     isDragging = False
@@ -213,7 +213,8 @@ def main_loop(btn,num1,num2):
     initial_flag=True
     user_flag = -1
     if btn==2:
-        workers_counts_monitoring(num1,num2)
+        print(auto_range)
+        workers_counts_monitoring(num1,num2,auto_range)
 
 def bck_btn():
     for widget in root.winfo_children():
@@ -231,6 +232,7 @@ def second_btn():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
     button4.place(x=30, y=30, width=60, height=30)
+
     tk.Label(root,text='[작업인원수 모니터링]').place(x=50, y=80)
     tk.Label(root,text='1. 할당인원 수를 입력하면, 할당인원수에 미달 할 때 경고 합니다.').place(x=50, y=110)
     tk.Label(root,text='2. 할당인원 수는 2명 이상 10명 이하로 설정 할 수 있습니다.').place(x=50, y=140)
@@ -248,8 +250,36 @@ def second_btn():
     scale2.set(10)
     scale2.place(x=160, y=330,)
     
-    button5 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(2,scale1.get(),scale2.get()))
+    button5 = tk.Button(root, text="다 음",command= lambda : second_btn2(scale1.get(),scale2.get()))
     button5.place(x=450, y=200, width=150, height=50)
+
+def second_btn2(allocated, term):
+    for widget in root.winfo_children():
+        widget.destroy()
+    button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
+    button4.place(x=30, y=30, width=60, height=30)
+
+    tk.Label(root,text='[범위 자동 할당 설정]').place(x=50, y=80)
+    tk.Label(root,text='1. 자동 할당 기능을 켜는 경우 라바콘을 자동으로 인식하여 범위를 자동으로 할당합니다.').place(x=50, y=110)
+    tk.Label(root,text='2. 자동할당에 실패할 경우 수동범위조작모드로 변경됩니다.').place(x=50, y=140)
+    tk.Label(root,text='3. 수동범위조작모드에서 마우스로 드래그하여 범위를 설정합니다.').place(x=50, y=170)
+    tk.Label(root,text='4. 마우스로 드래그 할 때 파란색이 되어야 범위가 설정됩니다. 너무 작으면 안 됩니다.').place(x=50, y=200)
+    tk.Label(root,text='5. 범위는 u 를 눌러서 초기화 할 수 있습니다.').place(x=50, y=230)
+    tk.Label(root,text='6. r을 누르면 다시 자동으로 범위를 할당 합니다.').place(x=50, y=260)
+    tk.Label(root,text='7. 할당된 이후 드래그 하여 다시 범위를 설정 할 수 있습니다.').place(x=50, y=290)
+    tk.Label(root,text='범위 자동 할당[ON/OFF]').place(x=50, y=320)
+
+    tk.Label(root, text="ON").place(x=200, y=310)
+    toggle_var = tk.IntVar()
+    toggle_check = tk.Checkbutton(root,variable=toggle_var)
+    toggle_check.place(x=200, y=325)
+
+    tk.Label(root,text='종료시에는 ESC키를 눌러서 종료해야 합니다.').place(x=50, y=360)
+
+    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(2,allocated,term,toggle_var.get()))
+    button6.place(x=450, y=300, width=150, height=50)
+
+
 
 #인터페이스 정의
 root = tk.Tk()

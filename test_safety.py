@@ -3,17 +3,17 @@ import numpy as np
 import time
 
 # yolo 로드
-net = cv2.dnn.readNet("weight_files_folder/door_stair/yolov3.weights", "weight_files_folder/door_stair/yolov3.cfg")
+net = cv2.dnn.readNet("weight_files_folder/safety/yolov3.weights", "weight_files_folder/safety/yolov3.cfg")
 #.weights => 훈련된 모델 파일, .cfg => 알고리즘 구성 파일
 
 #output layer선언- 모든 레이어를 불러온 후 unconnected layer즉, output layer만 추린다.
 layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
-img_color=cv2.imread('videos/door9.jpg',cv2.IMREAD_COLOR)
+img_color=cv2.imread('videos/trafficcone.jpg',cv2.IMREAD_COLOR)
 
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
-with open("weight_files_folder/door_stair/obj.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
+with open("weight_files_folder/safety/obj.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
     classes = [line.strip() for line in f.readlines()]
 
 
