@@ -18,7 +18,7 @@ with open("weight_files_folder/cocodata/coco.names", "r") as f:#.namses => 알�
 # yolo 로드=========================================
 
 # yolo 라바콘 로드 =================================
-net_t = cv2.dnn.readNet("weight_files_folder/trafficcone/yolov3.weights", "weight_files_folder/trafficcone/yolov3.cfg")
+net_t = cv2.dnn.readNet("weight_files_folder/safety/yolov3.weights", "weight_files_folder/safety/yolov3.cfg")
 #.weights => 훈련된 모델 파일, .cfg => 알고리즘 구성 파일
 
 #output layer선언- 모든 레이어를 불러온 후 unconnected layer즉, output layer만 추린다.
@@ -26,7 +26,7 @@ layer_names_t = net_t.getLayerNames()
 output_layers_t = [layer_names_t[i - 1] for i in net_t.getUnconnectedOutLayers()]
 
 classes_t = []#감지 할 수 있는 모든 객체 명이 들어간다.
-with open("weight_files_folder/trafficcone/obj.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
+with open("weight_files_folder/safety/obj.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
     classes_t = [line.strip() for line in f.readlines()]
 # yolo 라바콘 로드 =================================
 
@@ -34,6 +34,11 @@ with open("weight_files_folder/trafficcone/obj.names", "r") as f:#.namses => 알
 isDragging = False
 x0_m, y0_m, w_m, h_m = -1, -1, -1, -1
 
+#자동범위조정을 위한 것
+auto_boundary_tops=[]
+auto_boundary_bottoms=[]
+auto_boundary_lefts=[]
+auto_boundary_rights=[]
 #영상에 글자를 넣기 위한 사전 설정 
 font = cv2.FONT_HERSHEY_SIMPLEX
 #영상에 글자를 넣기 위한 사전 설정 - 사람수 count
@@ -157,16 +162,63 @@ def draw_caution(frame, idxs):
     return frame
 
 #범위자동설정
-def auto_boundary():
+def auto_boundary(frame):
     #10초동안 실행할것
     #yolo term 기능과 연동되게 할것
     #바운더리사각형을 반환할것
-    pass
+
+    global auto_boundary_tops, auto_boundary_bottoms, auto_boundary_lefts, auto_boundary_rights
+
+    # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
+    # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
+    # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
+    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(416, 416), 
+                                 mean=(0, 0, 0), swapRB=True, crop=False)
+    net_t.setInput(blob)
+    outputs = net_t.forward(output_layers_t)
+
+    #노이즈 제거를 위해 선언함 boxes에는 상자의 위치 좌표가 표시되고 confidences는 각 boxes에 대한 confidence
+    confidences=[]
+    boxes=[]
+
+    for output in outputs:
+        for detection in output:
+            scores = detection[5:]
+            class_id = np.argmax(scores)
+            confidence = scores[class_id]
+            
+            if classes_t[class_id] == "Safety Cone" and confidence > 0.8: # 신뢰도 임계값을 정한다.
+                left, top, w, h = detection[:4] * np.array([frame.shape[1], frame.shape[0], 
+                                                            frame.shape[1], frame.shape[0]])
+                left, top, w, h = int(left - w/2), int(top - h/2), int(w), int(h)
+                confidences.append(float(confidence))
+                boxes.append([left,top,w,h])
+    
+    # 중복되는 상자제거 필터링 NMS
+    idxs = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+
+    if len(idxs)>0:
+        for i in idxs.flatten():#좌표들 저장용 전역변수 사용.
+            box=boxes[i]
+            auto_boundary_tops.append(box[1])
+            auto_boundary_bottoms.append(box[1]+box[3])
+            auto_boundary_lefts.append(box[0])
+            auto_boundary_rights.append(box[0]+box[2])
+    
+    return idxs, boxes
+
+#자동범위 조정시 범위 필터링용 함수
+def auto_range_filter(numbers, mod):
+    duplicates = [num for num in numbers if numbers.count(num) > 1]
+    if mod==0:
+        return min(duplicates)
+    else:
+        return max(duplicates)    
 
 #작업인원수모니터링
 def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/vtest.avi')
+    cap = cv2.VideoCapture('videos/cone_people2.mp4')
     root.withdraw()#인터페이스 숨기기
     #isDragging => 마우스를 드래그 중인가
     #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
@@ -174,13 +226,11 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
     #initial_flag => initial_flag가 1일 때만 욜로를 진행한다. yolo term과 관련됨.
     #usef_flag => 1이면 사용자지정범위가 켜진다.
     global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
+    people_count=0
+    auto_range_on=0#auto_range하고 있는 중인가?
+    auto_range_on_count=0#auto_range하고 얼마나 욜로에 진입했나?
+
     while True:
-        #자동범위조정
-        if auto_range==1:
-            user_flag=-1#사용자지정범위 끄기
-
-        people_count=0
-
         #사용자 지정 범위의 변수선언
         pt1=(x0_m,y0_m)
         pt2=(x0_m+w_m,y0_m+h_m)
@@ -193,9 +243,15 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
         #비디오 사이즈 재조정
         frame = cv2.resize(frame, (640, 480))
 
+        #자동범위조정 설정시 사용자 지정범위 끄기=> 나중에 다시 켜야함.
+        if auto_range==1:
+            auto_range_on=1
+            user_flag=-1#사용자지정범위 끄기
+
         #사용자 지정 범위 
         cv2.imshow('frame', frame)
         cv2.setMouseCallback('frame', onMouse)
+        #모니터링 바운더리 사각형 그려지는 곳-욜로수행범위를 실질적으로 제한하는 것은 pt1 pt2의 변경
         if w_m>0 and h_m>0 and user_flag==1:
             if w_m<100 or h_m<100: # 작은 사각형은 다른 색 사용
                 cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
@@ -204,19 +260,47 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
             if isDragging==False and (w_m<100 or h_m<100): # 최종적으로 너무 작은 상자가 그려지면 지워짐
                 w_m=0
                 h_m=0
-            
-    
-        #yolo term 조절, yolo 진입
+        
+        #자동범위 확정적 그리기
+        if auto_range_on!=1 and user_flag!=1:#자동범위 실행중에는 그리지 않음
+            cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+
+        #yolo term 조절, yolo 진입, auto_range도 여기서 진입
         if initial_flag==True:
             prev_time = time.time()
+            
+            #자동 범위 조정 메인
+            if auto_range==1 and auto_range_on==1:
+                idxs, boxes=auto_boundary(frame)
+                auto_range_on_count+=1
+                if auto_range_on_count==(term*10):#10초동안 진행
+                    auto_range_on=0#auto range종료
+                    auto_range=0
+                    #pt1과 pt2를 지정하면, 그곳에서만 욜로 수행, 그를 위해서 x0_m,y0_m,w_m,h_m 조정
+                    if len(auto_boundary_tops)>0:
+                        x0_m=auto_range_filter(auto_boundary_lefts,0)
+                        y0_m=auto_range_filter(auto_boundary_tops,0)
+                        w_m=auto_range_filter(auto_boundary_rights,1)-auto_range_filter(auto_boundary_lefts,0)
+                        h_m=auto_range_filter(auto_boundary_bottoms,1)-auto_range_filter(auto_boundary_tops,0)
+                        pt1=(x0_m,y0_m)
+                        pt2=(x0_m+w_m,y0_m+h_m)
+                    else:
+                        pass # 자동범위 조정 실패 문구
+
+            #욜로 사람수 세기 메인
             if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
                 if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
                     idxs, boxes  = yolo(frame, pt1, pt2)
                     people_count=len(idxs)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    idxs, boxes  = yolo(frame, pt1, pt2)
+                    people_count=len(idxs)
                 else:
+                    print('hello')
                     idxs, boxes  = yolo(frame, (0,0), (640,480))
                     people_count=len(idxs)
             initial_flag=False
+
 
         #사람수 표시는 항상 그린다.
         #사람수 text배경 -검은색
@@ -233,13 +317,25 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
         if people_count<num and auto_range!=1:
             frame=draw_caution(frame, idxs)
 
+        #YOLO텀 조절용2
         lapsed_time = time.time() - prev_time
         if lapsed_time > (1./ term):
             initial_flag=True
 
+        #자동범위에서 라바콘 그리기
+        if auto_range==1:
+            if len(idxs)>0:
+                for i in idxs.flatten():
+                    box=boxes[i]
+                    left=box[0]
+                    top=box[1]
+                    w=box[2]
+                    h=box[3]
+                    cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
+
         #사람들 사각형 바운더리 그리기
         if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
-            if user_flag == 1 and w_m>100 and h_m>100:# 사각형이 너무 작으면, 전체 모니터링 수행
+            if  user_flag==1 and w_m>100 and h_m>100:# 사각형이 너무 작으면, 전체 모니터링 수행
                 frame = drawing(frame, idxs, boxes, term, pt1, pt2)
             else:
                 frame = drawing(frame, idxs, boxes, term, (0,0), (640,480))
@@ -259,13 +355,18 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
 
 #메인루프
 def main_loop(btn,num1,num2,auto_range):
-    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
+    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag,auto_boundary_tops, auto_boundary_bottoms, auto_boundary_lefts, auto_boundary_rights
     #전역변수 초기화
     isDragging = False
     x0_m, y0_m, w_m, h_m = -1, -1, -1, -1
     prev_time=0
     initial_flag=True
     user_flag = -1
+    auto_boundary_tops=[]
+    auto_boundary_bottoms=[]
+    auto_boundary_lefts=[]
+    auto_boundary_rights=[]
+
     if btn==2:
         print(auto_range)
         workers_counts_monitoring(num1,num2,auto_range)
