@@ -296,7 +296,6 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
                     idxs, boxes  = yolo(frame, pt1, pt2)
                     people_count=len(idxs)
                 else:
-                    print('hello')
                     idxs, boxes  = yolo(frame, (0,0), (640,480))
                     people_count=len(idxs)
             initial_flag=False
