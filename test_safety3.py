@@ -12,7 +12,7 @@ layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
 # 비디오 업로드
-cap = cv2.VideoCapture('videos/cone_people2.mp4')
+cap = cv2.VideoCapture('videos/construction3.mp4')
 
 
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
@@ -62,12 +62,13 @@ while True:
             class_id = np.argmax(scores)
             confidence = scores[class_id]
             
-            if classes[class_id] == "Safety Cone" and confidence > 0.8: # 신뢰도 임계값을 정한다.
+            if classes[class_id] == ("NO-Hardhat" or "Hardhat"): # 신뢰도 임계값을 정한다.
                 left, top, w, h = detection[:4] * np.array([frame.shape[1], frame.shape[0], 
                                                             frame.shape[1], frame.shape[0]])
                 left, top, w, h = int(left - w/2), int(top - h/2), int(w), int(h)
                 confidences.append(float(confidence))
                 boxes.append([left,top,w,h])
+                names.append(classes[class_id])
 
 
     # 중복되는 상자제거 필터링
@@ -81,6 +82,7 @@ while True:
             w=box[2]
             h=box[3]
             cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
+            cv2.putText(frame, names[i],(left, top),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,0),2)
             
 
 

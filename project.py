@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import time
 import tkinter as tk #인터페이스
+
 #----------------------------------------------------------------------------------------------------#
 
 # yolo 로드=========================================
@@ -208,8 +209,8 @@ def auto_boundary(frame):
     return idxs, boxes
 
 #자동범위 조정시 범위 필터링용 함수
-def auto_range_filter(numbers, mod):
-    duplicates = [num for num in numbers if numbers.count(num) > 1]
+def auto_range_filter(numbers, mod, term):
+    duplicates = [num for num in numbers if numbers.count(num) > int(term*10*0.2)]
     if mod==0:
         return min(duplicates)
     else:
@@ -218,7 +219,7 @@ def auto_range_filter(numbers, mod):
 #작업인원수모니터링
 def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/cone_people2.mp4')
+    cap = cv2.VideoCapture('videos/cone_people3.mp4')
     root.withdraw()#인터페이스 숨기기
     #isDragging => 마우스를 드래그 중인가
     #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
@@ -278,10 +279,10 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
                     auto_range=0
                     #pt1과 pt2를 지정하면, 그곳에서만 욜로 수행, 그를 위해서 x0_m,y0_m,w_m,h_m 조정
                     if len(auto_boundary_tops)>0:
-                        x0_m=auto_range_filter(auto_boundary_lefts,0)
-                        y0_m=auto_range_filter(auto_boundary_tops,0)
-                        w_m=auto_range_filter(auto_boundary_rights,1)-auto_range_filter(auto_boundary_lefts,0)
-                        h_m=auto_range_filter(auto_boundary_bottoms,1)-auto_range_filter(auto_boundary_tops,0)
+                        x0_m=auto_range_filter(auto_boundary_lefts,0,term)
+                        y0_m=auto_range_filter(auto_boundary_tops,0,term)
+                        w_m=auto_range_filter(auto_boundary_rights,1,term)-auto_range_filter(auto_boundary_lefts,0,term)
+                        h_m=auto_range_filter(auto_boundary_bottoms,1,term)-auto_range_filter(auto_boundary_tops,0,term)
                         pt1=(x0_m,y0_m)
                         pt2=(x0_m+w_m,y0_m+h_m)
                     else:
@@ -336,6 +337,8 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
         if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
             if  user_flag==1 and w_m>100 and h_m>100:# 사각형이 너무 작으면, 전체 모니터링 수행
                 frame = drawing(frame, idxs, boxes, term, pt1, pt2)
+            elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                frame = drawing(frame, idxs, boxes, term, pt1, pt2)    
             else:
                 frame = drawing(frame, idxs, boxes, term, (0,0), (640,480))
         
