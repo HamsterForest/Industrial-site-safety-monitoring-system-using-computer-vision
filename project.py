@@ -527,7 +527,7 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
                     auto_range_on=0#auto range종료
                     auto_range=0
                     #pt1과 pt2를 지정하면, 그곳에서만 욜로 수행, 그를 위해서 x0_m,y0_m,w_m,h_m 조정
-                    print(auto_boundary_tops)
+                  
                     if len(auto_boundary_tops)>=6:
                         x0_m=auto_range_filter(auto_boundary_lefts,0,term)
                         y0_m=auto_range_filter(auto_boundary_tops,0,term)
@@ -675,7 +675,7 @@ def helmet_monitoring(term, auto_range):#num은 할당 인원수
                     auto_range_on=0#auto range종료
                     auto_range=0
                     #pt1과 pt2를 지정하면, 그곳에서만 욜로 수행, 그를 위해서 x0_m,y0_m,w_m,h_m 조정
-                    print(auto_boundary_tops)
+                  
                     if len(auto_boundary_tops)>=6:
                         x0_m=auto_range_filter(auto_boundary_lefts,0,term)
                         y0_m=auto_range_filter(auto_boundary_tops,0,term)
@@ -833,7 +833,7 @@ def first_btn2(term):
 
     tk.Label(root,text='종료시에는 ESC키를 눌러서 종료해야 합니다.').place(x=50, y=360)
 
-    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(1,0,term, toggle_var.get(),0))
+    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(1,0,term, toggle_var.get()))
     button6.place(x=450, y=300, width=150, height=50)
 
 def second_btn():
