@@ -14,11 +14,15 @@ objects_duration = {}
 while True:
     ret, frame = cap.read()
     frame = cv2.resize(frame, (640, 480))
+    #가우시안 블러링-엣지검출전 노이즈 제거
+    blur=cv2.GaussianBlur(frame,(15,15),5)
+    #전경마스크 얻기
+    fgmask=fgbg.apply(blur,learningRate=lr)
+    #모폴로지-타원형 커널
+    kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(51,51))
+    #모폴로지-클로징-흰색영역의 검은색 구멍을 메운다
+    fgmask=cv2.morphologyEx(fgmask,cv2.MORPH_CLOSE,kernel)
 
-    blur = cv2.GaussianBlur(frame, (15, 15), 5)
-    fgmask = fgbg.apply(blur, learningRate=lr)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
-    fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_CLOSE, kernel)
 
     nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(fgmask)
 
