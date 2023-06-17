@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-cap = cv2.VideoCapture('videos/object.mp4')
+cap = cv2.VideoCapture('videos/object2.mp4')
 
 fgbg = cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=250,detectShadows=False)
 
@@ -42,14 +42,14 @@ while(1):
     cv2.imshow('mask',fgmask)
     cv2.imshow('frame',frame)
 
-    k = cv2.waitKey(30) & 0xff
+    k=cv2.waitKey(25)
     if k == 27:
         break
-    if k == ord('r'): #리셋
+    elif k == ord('r'): #리셋
         fgbg=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=250,detectShadows=False)
-    if k == ord('l'): #러닝레이트 초기화=>갑작스러운 움직임 만 검출
+    elif k == ord('l'): #러닝레이트 초기화=>갑작스러운 움직임 만 검출
         lr=-1
-    if k == ord('o'): #본질적으로 모든 움직임 기록
+    elif k == ord('o'): #본질적으로 모든 움직임 기록
         lr=0
 
 cap.release()
