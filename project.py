@@ -375,7 +375,7 @@ def stockpiled_monitoring_core(fgbg, current_time, objects, objects_duration, fr
 #적치물제한구역모니터링
 def stockpiled_monitoring(term, auto_range):
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/object3.mp4')
+    cap = cv2.VideoCapture('videos/object7.mp4')
     fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
     lr = 0
     objects = {}
@@ -390,6 +390,8 @@ def stockpiled_monitoring(term, auto_range):
     auto_range_on=0#auto_range하고 있는 중인가?
     auto_range_on_count=0#auto_range하고 얼마나 욜로에 진입했나?
     red_counts=0
+
+    first_boundary_made=0#자동혹은 수동 범위 확정에서 최초로 경계를 그릴때, fgbg를 초기화 하기 위한 변수
 
     while True:
         #사용자 지정 범위의 변수선언
@@ -420,13 +422,19 @@ def stockpiled_monitoring(term, auto_range):
                 cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
             else:
                 cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+                first_boundary_made=1
             if isDragging==False and (w_m<100 or h_m<100): # 최종적으로 너무 작은 상자가 그려지면 지워짐
+                first_boundary_made=0
                 w_m=0
                 h_m=0
         
         #자동범위 확정적 그리기
         if auto_range_on!=1 and user_flag!=1:#자동범위 실행중에는 그리지 않음
             cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+            if first_boundary_made==1:#경계가 최초로 확정된 때에는 fgbg를 초기화
+                first_boundary_made=0
+                fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
+                
 
         #yolo term 조절, yolo 진입, auto_range도 여기서 진입
         if initial_flag==True:
@@ -456,6 +464,7 @@ def stockpiled_monitoring(term, auto_range):
                         pt2=(x0_m+w_m,y0_m+h_m)
                     else:
                         pass # 자동범위 조정 실패 문구
+                    first_boundary_made=1
             initial_flag=False
 
         #욜로 사람수 세기 메인
@@ -660,7 +669,7 @@ def off_limit_monitoring(term,auto_range):
 #작업인원수모니터링
 def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/vtest5.mp4')
+    cap = cv2.VideoCapture('videos/cone_people3.mp4')
     root.withdraw()#인터페이스 숨기기
     #isDragging => 마우스를 드래그 중인가
     #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
@@ -1091,14 +1100,14 @@ def third_btn():
     tk.Label(root,text='[적치물제한구역 모니터링]').place(x=50, y=80)
     tk.Label(root,text='1. 현재 촬영구역의 상태가 비어 있는 상태에서 시작해야 합니다.').place(x=50, y=110)
     tk.Label(root,text='2. 혹은 비어 있는 상태에서 [r]키를 눌러 빈 방의 상태임을 확정해주세요.').place(x=50, y=140)
-    tk.Label(root,text='[모니터링 빈도 설정]').place(x=50, y=170)
+    tk.Label(root,text='[모니터링 빈도 설정-범위자동할당에서만 사용]').place(x=50, y=170)
     tk.Label(root,text='3. 사용자 기기의 성능에 따라 모니터링 빈도를 조절하세요.').place(x=50, y=200)
     tk.Label(root,text='4. 예를들어 10을 설정하면, 1초에 10번 모니터링 하게 됩니다.').place(x=50, y=230)
     tk.Label(root,text='5. 8보다 작은 경우, 사람의 경계를 표시하는 바운더리 박스가 그려지지 않습니다.').place(x=50, y=260)
 
     tk.Label(root,text='모니터링 빈도 : ').place(x=50, y=300)
     scale1 = tk.Scale(root, from_=1, to=60,orient="horizontal", length=300)
-    scale1.set(10)
+    scale1.set(1)
     scale1.place(x=160, y=280,)
     
     button5 = tk.Button(root, text="다 음",command= lambda : third_btn2(scale1.get()))
