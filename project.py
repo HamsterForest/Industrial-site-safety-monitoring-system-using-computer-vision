@@ -94,15 +94,27 @@ user_flag = -1
 #-----------------------------------------------------------------------------------------------------#
 #cut_frame
 #onMouse
+#helmet_yolo
 #yolo
 #drawing
 #draw_caution
 #auto_boundary
+#auto_range_filter
+#stockpiled_monitoring_core
+#stockpiled_monitoring
+#offlimit_monitoring
 #workers_counts_monitoring
+#helmet_monitoring
 #main_loop
 #bck_btn
+#first_btn
+#first_btn2
 #second_btn
 #second_btn2
+#third_btn
+#third_btn2
+#forth_btn
+#forth_btn2
 
 def cut_frame(frame, pt1, pt2):
     
