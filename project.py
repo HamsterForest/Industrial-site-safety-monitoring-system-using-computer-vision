@@ -385,9 +385,12 @@ def stockpiled_monitoring_core(fgbg, current_time, objects, objects_duration, fr
     return copied_frame, objects, objects_duration,red_counts
 
 #적치물제한구역모니터링
-def stockpiled_monitoring(term, auto_range):
+def stockpiled_monitoring(term, auto_range,sample_video):
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/object7.mp4')
+    if sample_video==1:
+        cap = cv2.VideoCapture('videos/object7.mp4')
+    else:
+        cap = cv2.VideoCapture(0)
     fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
     lr = 0
     objects = {}
@@ -533,9 +536,13 @@ def stockpiled_monitoring(term, auto_range):
     root.deiconify()#인터페이스 다시 등장
 
 #접근금지구역모니터링
-def off_limit_monitoring(term,auto_range):
+def off_limit_monitoring(term,auto_range,sample_video):
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/vtest5.mp4')
+    if sample_video==1:
+        cap = cv2.VideoCapture('videos/vtest5.mp4')
+    else:
+        cap = cv2.VideoCapture(0)
+
     root.withdraw()#인터페이스 숨기기
     #isDragging => 마우스를 드래그 중인가
     #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
@@ -679,9 +686,13 @@ def off_limit_monitoring(term,auto_range):
     root.deiconify()#인터페이스 다시 등장
 
 #작업인원수모니터링
-def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
+def workers_counts_monitoring(num, term, auto_range,sample_video):#num은 할당 인원수
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/cone_people3.mp4')
+    if sample_video==1:
+        cap = cv2.VideoCapture('videos/cone_people3.mp4')
+    else:
+        cap = cv2.VideoCapture(0)
+    
     root.withdraw()#인터페이스 숨기기
     #isDragging => 마우스를 드래그 중인가
     #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
@@ -826,9 +837,13 @@ def workers_counts_monitoring(num, term, auto_range):#num은 할당 인원수
     root.deiconify()#인터페이스 다시 등장
 
 #안전모착용모니터링
-def helmet_monitoring(term, auto_range):#num은 할당 인원수
+def helmet_monitoring(term, auto_range, sample_video):#num은 할당 인원수
     # 비디오 업로드
-    cap = cv2.VideoCapture('videos/safety.mp4')
+    if sample_video==1:
+        cap = cv2.VideoCapture('videos/safety.mp4')
+    else:
+        cap = cv2.VideoCapture(0)
+
     root.withdraw()#인터페이스 숨기기
     #isDragging => 마우스를 드래그 중인가
     #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
@@ -968,7 +983,7 @@ def helmet_monitoring(term, auto_range):#num은 할당 인원수
     root.deiconify()#인터페이스 다시 등장
 
 #메인루프
-def main_loop(btn,allocated,term,auto_range):
+def main_loop(btn,allocated,term,auto_range,sample_video):
     global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag,auto_boundary_tops, auto_boundary_bottoms, auto_boundary_lefts, auto_boundary_rights
     #전역변수 초기화
     isDragging = False
@@ -982,29 +997,36 @@ def main_loop(btn,allocated,term,auto_range):
     auto_boundary_rights=[]
 
     if btn==1:
-        off_limit_monitoring(term,auto_range)
+        off_limit_monitoring(term,auto_range,sample_video)
     elif btn==2:
-        workers_counts_monitoring(allocated,term,auto_range)#할당인원, term 변수, auto_range여부
+        workers_counts_monitoring(allocated,term,auto_range,sample_video)#할당인원, term 변수, auto_range여부
     elif btn==3:
-        stockpiled_monitoring(term, auto_range)
+        stockpiled_monitoring(term, auto_range,sample_video)
     elif btn==4:
-        helmet_monitoring(term,auto_range)
+        helmet_monitoring(term,auto_range,sample_video)
     
 
 def bck_btn():
     for widget in root.winfo_children():
         widget.destroy()
-    button1 = tk.Button(root, text="접근금지구역 모니터링",command=first_btn)
-    button2 = tk.Button(root, text="작업인원수 모니터링",command=second_btn)
-    button3 = tk.Button(root, text="적치물 제한 구역 모니터링",command=third_btn)
-    button4 = tk.Button(root, text="안전모 착용 모니터링",command=forth_btn)
+    tk.Label(root,text='[테스트용 영상을 사용해서 실행]').place(x=380, y=355)
+    tk.Label(root, text="ON").place(x=580, y=340)
+    toggle_var = tk.IntVar()
+    toggle_var.set(1)
+    toggle_check = tk.Checkbutton(root,variable=toggle_var)
+    toggle_check.place(x=580, y=355)
+
+    button1 = tk.Button(root, text="접근금지구역 모니터링",command=lambda : first_btn(toggle_var.get()))
+    button2 = tk.Button(root, text="작업인원수 모니터링",command=lambda : second_btn(toggle_var.get()))
+    button3 = tk.Button(root, text="적치물 제한 구역 모니터링",command=lambda : third_btn(toggle_var.get()))
+    button4 = tk.Button(root, text="안전모 착용 모니터링",command=lambda : forth_btn(toggle_var.get()))
 
     button1.place(x=50, y=30, width=250, height=50)
     button2.place(x=50, y=130, width=250, height=50)
     button3.place(x=50, y=230, width=250, height=50)
     button4.place(x=50, y=330, width=250, height=50)
 
-def first_btn():
+def first_btn(sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1022,10 +1044,10 @@ def first_btn():
     scale1.set(10)
     scale1.place(x=160, y=230,)
     
-    button5 = tk.Button(root, text="다 음",command= lambda : first_btn2(scale1.get()))
+    button5 = tk.Button(root, text="다 음",command= lambda : first_btn2(scale1.get(),sample_video))
     button5.place(x=450, y=300, width=150, height=50)
 
-def first_btn2(term):
+def first_btn2(term,sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1048,10 +1070,10 @@ def first_btn2(term):
 
     tk.Label(root,text='종료시에는 ESC키를 눌러서 종료해야 합니다.').place(x=50, y=360)
 
-    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(1,0,term, toggle_var.get()))
+    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(1,0,term, toggle_var.get(), sample_video))
     button6.place(x=450, y=300, width=150, height=50)
 
-def second_btn():
+def second_btn(sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1074,10 +1096,10 @@ def second_btn():
     scale2.set(10)
     scale2.place(x=160, y=330,)
     
-    button5 = tk.Button(root, text="다 음",command= lambda : second_btn2(scale1.get(),scale2.get()))
+    button5 = tk.Button(root, text="다 음",command= lambda : second_btn2(scale1.get(),scale2.get(),sample_video))
     button5.place(x=450, y=200, width=150, height=50)
 
-def second_btn2(allocated, term):
+def second_btn2(allocated, term,sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1100,10 +1122,10 @@ def second_btn2(allocated, term):
 
     tk.Label(root,text='종료시에는 ESC키를 눌러서 종료해야 합니다.').place(x=50, y=360)
 
-    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(2,allocated,term,toggle_var.get()))
+    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(2,allocated,term,toggle_var.get(),sample_video))
     button6.place(x=450, y=300, width=150, height=50)
 
-def third_btn():
+def third_btn(sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1122,10 +1144,10 @@ def third_btn():
     scale1.set(1)
     scale1.place(x=160, y=280,)
     
-    button5 = tk.Button(root, text="다 음",command= lambda : third_btn2(scale1.get()))
+    button5 = tk.Button(root, text="다 음",command= lambda : third_btn2(scale1.get(),sample_video))
     button5.place(x=450, y=180, width=150, height=50)
 
-def third_btn2(term):
+def third_btn2(term,sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1148,10 +1170,10 @@ def third_btn2(term):
 
     tk.Label(root,text='종료시에는 ESC키를 눌러서 종료해야 합니다.').place(x=50, y=360)
 
-    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(3,0,term,toggle_var.get()))
+    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(3,0,term,toggle_var.get(),sample_video))
     button6.place(x=450, y=300, width=150, height=50)
 
-def forth_btn():
+def forth_btn(sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1169,10 +1191,10 @@ def forth_btn():
     scale1.set(3)
     scale1.place(x=160, y=230,)
     
-    button5 = tk.Button(root, text="다 음",command= lambda : forth_btn2(scale1.get()))
+    button5 = tk.Button(root, text="다 음",command= lambda : forth_btn2(scale1.get(),sample_video))
     button5.place(x=450, y=300, width=150, height=50)
 
-def forth_btn2(term):
+def forth_btn2(term,sample_video):
     for widget in root.winfo_children():
         widget.destroy()
     button4 = tk.Button(root, text="뒤로 가기", command=bck_btn)
@@ -1195,7 +1217,7 @@ def forth_btn2(term):
 
     tk.Label(root,text='종료시에는 ESC키를 눌러서 종료해야 합니다.').place(x=50, y=360)
 
-    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(4,0,term, toggle_var.get()))
+    button6 = tk.Button(root, text="모니터링 시작",command= lambda : main_loop(4,0,term, toggle_var.get(),sample_video))
     button6.place(x=450, y=300, width=150, height=50)
 
 #인터페이스 정의
@@ -1204,10 +1226,17 @@ root.title("Monitoring system")
 root.geometry("640x400")
 root.resizable(False, False)
 
-button1 = tk.Button(root, text="접근금지구역 모니터링",command=first_btn)
-button2 = tk.Button(root, text="작업인원수 모니터링",command=second_btn)
-button3 = tk.Button(root, text="적치물 제한 구역 모니터링",command=third_btn)
-button4 = tk.Button(root, text="안전모 착용 모니터링",command=forth_btn)
+tk.Label(root,text='[테스트용 영상을 사용해서 실행]').place(x=380, y=355)
+tk.Label(root, text="ON").place(x=580, y=340)
+toggle_var = tk.IntVar()
+toggle_var.set(1)
+toggle_check = tk.Checkbutton(root,variable=toggle_var)
+toggle_check.place(x=580, y=355)
+
+button1 = tk.Button(root, text="접근금지구역 모니터링",command=lambda : first_btn(toggle_var.get()))
+button2 = tk.Button(root, text="작업인원수 모니터링",command=lambda : second_btn(toggle_var.get()))
+button3 = tk.Button(root, text="적치물 제한 구역 모니터링",command=lambda : third_btn(toggle_var.get()))
+button4 = tk.Button(root, text="안전모 착용 모니터링",command=lambda : forth_btn(toggle_var.get()))
 
 button1.place(x=50, y=30, width=250, height=50)
 button2.place(x=50, y=130, width=250, height=50)
