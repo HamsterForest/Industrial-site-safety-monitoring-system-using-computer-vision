@@ -237,6 +237,8 @@ def drawing(frame, idxs, boxes, term, pt1, pt2, names_check, names):
                 h=box[3]
                 if term>8:
                     cv2.rectangle(frame, (left+pt1[0], top+pt1[1]), (left+w+pt1[0], top+h+pt1[1]), (0, 255, 0), 2)
+                else:
+                    cv2.circle(frame, (left+int(w/2)+pt1[0], top+int(h/2)+pt1[1]), 1, (0, 0, 255), 2)
         return frame
     elif names_check==1:
         nohelmet_count=0
