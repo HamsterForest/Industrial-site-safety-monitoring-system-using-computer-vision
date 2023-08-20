@@ -150,9 +150,14 @@ def onMouse(event, x, y, flags, param):
             h_m = y - y0_m
 
 #헬멧 감지 욜로
-def helmet_yolo(frame, pt1, pt2):
+def helmet_yolo(frame, pt1, pt2, mod):
     #지정된 사이즈로 프레임 자르기
-    frame = cut_frame(frame, pt1, pt2)
+    if mod==0:#지정된 범위 안에만 감지
+        frame = cut_frame(frame, pt1, pt2)
+    else:
+        copyfrmae=frame.copy()
+        copyframe=cv2.rectangle(copyfrmae, pt1, pt2, (0,0,0), -1)
+        frame=copyframe.copy()
     
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
@@ -181,7 +186,7 @@ def helmet_yolo(frame, pt1, pt2):
             names.append(classes_h[class_id])
     
     # 중복되는 상자제거 필터링 NMS
-    idxs = cv2.dnn.NMSBoxes(boxes, confidences, 0.3, 0.4)
+    idxs = cv2.dnn.NMSBoxes(boxes, confidences, 0.3, 0.6)
     
     return idxs, boxes, names
 
@@ -240,7 +245,7 @@ def drawing(frame, idxs, boxes, term, pt1, pt2, names_check, names):
                 else:
                     cv2.circle(frame, (left+int(w/2)+pt1[0], top+int(h/2)+pt1[1]), 1, (0, 0, 255), 2)
         return frame
-    elif names_check==1:
+    elif names_check==1:#헬멧 사각형 그리기
         nohelmet_count=0
         if len(idxs)>0:
             for i in idxs.flatten():
@@ -249,7 +254,6 @@ def drawing(frame, idxs, boxes, term, pt1, pt2, names_check, names):
                 top=box[1]
                 w=box[2]
                 h=box[3]
-                
                 if names[i]=='head':
                     cv2.rectangle(frame, (left+pt1[0], top+pt1[1]), (left+w+pt1[0], top+h+pt1[1]), (0, 0, 255), 2)
                     cv2.putText(frame, 'No Hard-hat',(left+pt1[0], top+pt1[1]),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,255),2)
@@ -1106,11 +1110,11 @@ def helmet_monitoring(term, auto_range, sample_video):#num은 할당 인원수
             #욜로 헬멧 감지
             if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
                 if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
-                    idxs, boxes, names  = helmet_yolo(frame, pt1, pt2)
+                    idxs, boxes, names  = helmet_yolo(frame, pt1, pt2,0)
                 elif len(auto_boundary_tops)>0:#보완이 필요한 부분
-                    idxs, boxes, names  = helmet_yolo(frame, pt1, pt2)
+                    idxs, boxes, names  = helmet_yolo(frame, pt1, pt2,0)
                 else:
-                    idxs, boxes, names  = helmet_yolo(frame, (0,0), (640,480))
+                    idxs, boxes, names  = helmet_yolo(frame, (0,0), (640,480),0)
             initial_flag=False
         
         if auto_range!=1:
@@ -1787,7 +1791,7 @@ def workers_counts_off_limit_stockpiled_monitoring(num,term,auto_range,sample_vi
 def workers_counts_off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sample_video):
     # 비디오 업로드
     if sample_video==1:
-        cap = cv2.VideoCapture('videos/cone_box.mp4')
+        cap = cv2.VideoCapture('videos/allforone.mp4')
     else:
         cap = cv2.VideoCapture(0)
     
@@ -1901,11 +1905,11 @@ def workers_counts_off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sa
             #헬멧 모니터링
             if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
                 if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
-                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2)
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
                 elif len(auto_boundary_tops)>0:#보완이 필요한 부분
-                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2)
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
                 else:
-                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, (0,0), (640,480))
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, (0,0), (640,480),0)
             initial_flag=False
         
         #적치물제한 감시 부분 - 텀 조절 없이 실시간으로 하도록 함
@@ -1964,12 +1968,7 @@ def workers_counts_off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sa
         
         #헬멧 사각형 바운더리 그리기
         if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
-            if  user_flag==1 and w_m>100 and h_m>100:# 사각형이 너무 작으면, 전체 모니터링 수행
-                frame, nohelmet_count = drawing(frame, idxs_h, boxes_h, term, pt1, pt2,1,names_h)
-            elif len(auto_boundary_tops)>0:#보완이 필요한 부분
-                frame, nohelmet_count = drawing(frame, idxs_h, boxes_h, term, pt1, pt2,1,names_h)    
-            else:
-                frame, nohelmet_count = drawing(frame, idxs_h, boxes_h, term, (0,0), (640,480),1,names_h)
+            frame, nohelmet_count = drawing(frame, idxs_h, boxes_h, term, (0,0), (640,480),1,names_h)
 
         cv2.imshow('frame', frame)
 
@@ -2016,7 +2015,7 @@ def main_loop(toggle1, toggle2, toggle3, toggle4,allocated,term,auto_range,sampl
         workers_counts_off_limit_monitoring(allocated,term,auto_range,sample_video)
     elif toggle1==1 and toggle2==1 and toggle3==1 and toggle4==0:#적치물제한+접근금지+작업인원수제한
         workers_counts_off_limit_stockpiled_monitoring(allocated,term,auto_range,sample_video)
-    elif toggle1==1 and toggle2==1 and toggle3==1 and toggle4==1:#적치물제한+접근금지+작업인원수제한
+    elif toggle1==1 and toggle2==1 and toggle3==1 and toggle4==1:#적치물제한+접근금지+작업인원수제한+안전모 
         workers_counts_off_limit_stockpiled_helmet_monitoring(allocated,term,auto_range,sample_video)
 
     root.deiconify()#인터페이스 다시 등장

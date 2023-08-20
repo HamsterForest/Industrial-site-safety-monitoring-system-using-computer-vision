@@ -12,7 +12,7 @@ layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
 # 비디오 업로드
-cap = cv2.VideoCapture('videos/construction4.mp4')
+cap = cv2.VideoCapture('videos/construction11.mp4')
 
 
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.

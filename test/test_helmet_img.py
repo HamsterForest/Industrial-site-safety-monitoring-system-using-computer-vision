@@ -10,7 +10,7 @@ net = cv2.dnn.readNet("weight_files_folder/helmet/yolov3.weights", "weight_files
 layer_names = net.getLayerNames()
 output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 
-img_color=cv2.imread('videos/mini3.jpg',cv2.IMREAD_COLOR)
+img_color=cv2.imread('videos/closehelmet3.jpg',cv2.IMREAD_COLOR)
 
 classes = []#감지 할 수 있는 모든 객체 명이 들어간다.
 with open("weight_files_folder/helmet/obj.names", "r") as f:#.namses => 알고리즘이 감지 할 수 있는 객체의 이름 모음
@@ -25,7 +25,7 @@ color = (255, 0, 0)
 thickness = 2
 
 
-img_color = cv2.resize(img_color, (300, 600))
+img_color = cv2.resize(img_color, (640, 480))
 
 # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
 # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
