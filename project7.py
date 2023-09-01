@@ -63,6 +63,13 @@ count_cor_back2 = (count_cor[0]+200, count_cor[1]+5)
 count_font_scale = 0.5
 count_color = (255, 255, 255)
 count_thickness = 1
+#영상에 글자를 넣기 위한 사전 설정 - 안전모 모니터링 경고 
+helmet_caut_cor = (100, 70) # 글자 시작지점 글자의 왼쪽 하단
+helmet_caut_cor_back = (helmet_caut_cor[0]-10, helmet_caut_cor[1]-15) # 글자 배경을 위한 사각형 시작 좌표
+helmet_caut_cor_back2 = (helmet_caut_cor[0]+200, helmet_caut_cor[1]+5)
+helmet_caut_font_scale = 0.5
+helmet_caut_color = (255, 255, 255)
+helmet_caut_thickness = 1
 #영상에 글자를 넣기 위한 사전 설정 - 접근금지 모니터링
 offlimit_cor = (20, 20) # 글자 시작지점 글자의 왼쪽 하단
 offlimit_cor_back = (offlimit_cor[0]-10, offlimit_cor[1]-15) # 글자 배경을 위한 사각형 시작 좌표
@@ -267,25 +274,25 @@ def drawing(frame, idxs, boxes, term, pt1, pt2, names_check, names):
 
 #경고 띄우기
 def draw_caution(frame, idxs, type):
-    if type==1:
+    if type==1:#접근금지 모니터링
         cv2.rectangle(frame, offlimit_caut_cor_back, offlimit_caut_cor_back2, (0, 0, 0), -1)
         cv2.circle(frame,(offlimit_caut_cor[0]-45,offlimit_caut_cor[1]-5),15,(0,0,255),-1)
         cv2.putText(frame, 'Caution : people in no access area'.format(len(idxs)), offlimit_caut_cor, font, 
                     offlimit_caut_font_scale, offlimit_caut_color, offlimit_caut_thickness, cv2.LINE_AA)
         return frame
-    elif type==2:
+    elif type==2:#작업인원수 모니터링
         cv2.rectangle(frame, count_caut_cor_back, count_caut_cor_back2, (0, 0, 0), -1)
         cv2.circle(frame,(count_caut_cor[0]-45,count_caut_cor[1]-5),15,(0,0,255),-1)
         cv2.putText(frame, 'Caution : lack of workers'.format(len(idxs)), count_caut_cor, font, 
                     count_caut_font_scale, count_caut_color, count_caut_thickness, cv2.LINE_AA)
         return frame
-    elif type==3:
+    elif type==3:#적치물제한구역 모니터링
         cv2.rectangle(frame, count_caut_cor_back, (count_caut_cor[0]+225, count_caut_cor[1]+5), (0, 0, 0), -1)
         cv2.circle(frame,(count_caut_cor[0]-45,count_caut_cor[1]-5),15,(0,0,255),-1)
         cv2.putText(frame, 'Caution : Stockpiles in area', count_caut_cor, font, 
                     count_caut_font_scale, count_caut_color, count_caut_thickness, cv2.LINE_AA)
         return frame
-    elif type==4:
+    elif type==4:#안전모 착용 모니터링
         cv2.rectangle(frame, count_caut_cor_back, count_caut_cor_back2, (0, 0, 0), -1)
         cv2.circle(frame,(count_caut_cor[0]-45,count_caut_cor[1]-5),15,(0,0,255),-1)
         cv2.putText(frame, 'Caution : No Hard-hat', count_caut_cor, font, 
@@ -308,6 +315,12 @@ def draw_caution(frame, idxs, type):
         cv2.circle(frame,(offlimit_caut_cor_c[0]-45,offlimit_caut_cor_c[1]-5),15,(0,0,255),-1)
         cv2.putText(frame, 'Caution : people in no access area', offlimit_caut_cor_c, font, 
                     offlimit_caut_font_scale, offlimit_caut_color, offlimit_caut_thickness, cv2.LINE_AA)
+        return frame
+    elif type==8:#안전모 경고문
+        cv2.rectangle(frame, helmet_caut_cor_back, helmet_caut_cor_back2, (0, 0, 0), -1)
+        cv2.circle(frame,(helmet_caut_cor[0]-45,helmet_caut_cor[1]-5),15,(0,0,255),-1)
+        cv2.putText(frame, 'Caution : No Hard-hat', helmet_caut_cor, font, 
+                    helmet_caut_font_scale, helmet_caut_color, helmet_caut_thickness, cv2.LINE_AA)
         return frame
 
 
@@ -1819,7 +1832,8 @@ def workers_counts_off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sa
     boxes=[]
     boxes_h=[]
     names_h=[]
-    
+    nohelmet_count=0
+
     while True:
         #사용자 지정 범위의 변수선언
         pt1=(x0_m,y0_m)
@@ -1940,9 +1954,586 @@ def workers_counts_off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sa
         if people_count<num and auto_range!=1:
             frame=draw_caution(frame, idxs,2)
         
+        #헬멧 확인 경고
+        if len(idxs_h)>0 and nohelmet_count>0 and auto_range!=1:
+            frame=draw_caution(frame, idxs_h,8)
+
         #접근금지 확인 및 경고 표현
         if offlimit==1:
             frame=draw_caution(frame, idxs,7)
+
+        #YOLO텀 조절용2
+        lapsed_time = time.time() - prev_time
+        if lapsed_time > (1./ term):
+            initial_flag=True
+            switch=switch*(-1)
+
+
+        #자동범위에서 라바콘 그리기
+        if auto_range==1:
+            if len(idxs)>0:
+                for i in idxs.flatten():
+                    box=boxes[i]
+                    left=box[0]
+                    top=box[1]
+                    w=box[2]
+                    h=box[3]
+                    cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
+
+        #사람들 사각형 바운더리 그리기, 항상 전체모니터링 함.
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+            frame = drawing(frame, idxs, boxes, term, (0,0), (640,480),0,0)
+        
+        #헬멧 사각형 바운더리 그리기
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+            frame, nohelmet_count = drawing(frame, idxs_h, boxes_h, term, (0,0), (640,480),1,names_h)
+
+        cv2.imshow('frame', frame)
+
+        keycode=cv2.waitKey(25)
+        if keycode == 27:#esc키 종료
+            break
+        elif keycode == ord('u'):# 사용자 지정 범위 끄기
+            user_flag=-1
+        elif keycode == ord('r'):# 디폴트화면 리셋
+            fgbg=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=250,detectShadows=False)
+    cap.release()
+    cv2.destroyAllWindows()
+    root.deiconify()#인터페이스 다시 등장
+
+def workers_counts_off_limit_helmet_monitoring(num,term,auto_range,sample_video):
+    # 비디오 업로드
+    if sample_video==1:
+        cap = cv2.VideoCapture('videos/allforone.mp4')
+    else:
+        cap = cv2.VideoCapture(0)
+    
+    fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
+
+    root.withdraw()#인터페이스 숨기기
+    #isDragging => 마우스를 드래그 중인가
+    #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
+    #prev_time => yolo term 관련
+    #initial_flag => initial_flag가 1일 때만 욜로를 진행한다. yolo term과 관련됨.
+    #usef_flag => 1이면 사용자지정범위가 켜진다.
+    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
+    people_count=0
+    offlimit=0
+    auto_range_on=0#auto_range하고 있는 중인가?
+    auto_range_on_count=0#auto_range하고 얼마나 욜로에 진입했나?
+    blue_counts=0
+    red_counts=0
+    objects = {}
+    objects_duration = {}
+    first_boundary_made=0#자동혹은 수동 범위 확정에서 최초로 경계를 그릴때, fgbg를 초기화 하기 위한 변수
+    switch=-1#한번은 coco 한번은 helmet 번갈아가면서 yolo 하기 위한 변수
+    idxs=[]
+    idxs_h=[]
+    boxes=[]
+    boxes_h=[]
+    names_h=[]
+    nohelmet_count=0
+
+    while True:
+        #사용자 지정 범위의 변수선언
+        pt1=(x0_m,y0_m)
+        pt2=(x0_m+w_m,y0_m+h_m)
+        
+        #비디오캡쳐
+        ret, frame = cap.read()
+        #비디오 없으면 종료
+        if not ret:
+            break
+        #비디오 사이즈 재조정
+        frame = cv2.resize(frame, (640, 480))
+
+        current_time = time.time()
+
+        #자동범위조정 설정시 사용자 지정범위 끄기=> 나중에 다시 켜야함.
+        if auto_range==1:
+            auto_range_on=1
+            user_flag=-1#사용자지정범위 끄기
+
+        #사용자 지정 범위 
+        cv2.imshow('frame', frame)
+        cv2.setMouseCallback('frame', onMouse)
+        #모니터링 바운더리 사각형 그려지는 곳-욜로수행범위를 실질적으로 제한하는 것은 pt1 pt2의 변경
+        if w_m>0 and h_m>0 and user_flag==1:
+            if w_m<100 or h_m<100: # 작은 사각형은 다른 색 사용
+                cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
+            else:
+                cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+                first_boundary_made=1
+            if isDragging==False and (w_m<100 or h_m<100): # 최종적으로 너무 작은 상자가 그려지면 지워짐
+                first_boundary_made=0
+                w_m=0
+                h_m=0
+        
+        #자동범위 확정적 그리기
+        if auto_range_on!=1 and user_flag!=1:#자동범위 실행중에는 그리지 않음
+            cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+            if first_boundary_made==1:#경계가 최초로 확정된 때에는 fgbg를 초기화
+                first_boundary_made=0
+                fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
+
+        #yolo term 조절, yolo 진입, auto_range도 여기서 진입
+        if initial_flag==True:
+            prev_time = time.time()
+            
+            #자동 범위 조정 메인
+            if auto_range==1 and auto_range_on==1:
+                idxs, boxes=auto_boundary(frame)
+                auto_range_on_count+=1
+                if auto_range_on_count==(term*10):#10초동안 진행
+                    auto_range_on=0#auto range종료
+                    auto_range=0
+                    #pt1과 pt2를 지정하면, 그곳에서만 욜로 수행, 그를 위해서 x0_m,y0_m,w_m,h_m 조정
+                  
+                    if len(auto_boundary_tops)>=6:
+                        x0_m=auto_range_filter(auto_boundary_lefts,0,term)
+                        y0_m=auto_range_filter(auto_boundary_tops,0,term)
+                        w_m=auto_range_filter(auto_boundary_rights,1,term)-auto_range_filter(auto_boundary_lefts,0,term)
+                        h_m=auto_range_filter(auto_boundary_bottoms,1,term)-auto_range_filter(auto_boundary_tops,0,term)
+                        pt1=(x0_m,y0_m)
+                        pt2=(x0_m+w_m,y0_m+h_m)
+                    elif 0<len(auto_boundary_tops)<6:
+                        x0_m=min(auto_boundary_lefts)
+                        w_m=max(auto_boundary_rights)-min(auto_boundary_lefts)
+                        y0_m=0
+                        h_m=480
+                        pt1=(x0_m,y0_m)
+                        pt2=(x0_m+w_m,y0_m+h_m)
+                    else:
+                        pass # 자동범위 조정 실패 문구
+                    first_boundary_made=1
+            
+            #욜로 사람수 세기 메인
+            if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==-1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, pt1, pt2)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, pt1, pt2)
+                else:
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, (0,0), (640,480))
+            initial_flag=False
+            #헬멧 모니터링
+            if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
+                else:
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, (0,0), (640,480),0)
+            initial_flag=False
+        
+        #사람수 표시는 항상 그린다.
+        #사람수 text배경 -검은색
+        if auto_range!=1:
+            cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
+            cv2.putText(frame, 'Allocated : {} Count : {}'.format(num,people_count), count_cor, font, 
+                        count_font_scale, count_color, count_thickness, cv2.LINE_AA)
+        else:#자동 범위 설정중일 경우
+            cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
+            cv2.putText(frame, 'Detecting Traffic cone', count_cor, font, 
+                        count_font_scale, count_color, count_thickness, cv2.LINE_AA)
+        
+        #사람수 확인 및 경고 표현
+        if people_count<num and auto_range!=1:
+            frame=draw_caution(frame, idxs,2)
+        
+        #헬멧 확인 경고
+        if len(idxs_h)>0 and nohelmet_count>0 and auto_range!=1:
+            frame=draw_caution(frame, idxs_h,8)
+
+        #접근금지 확인 및 경고 표현
+        if offlimit==1:
+            frame=draw_caution(frame, idxs,7)
+
+        #YOLO텀 조절용2
+        lapsed_time = time.time() - prev_time
+        if lapsed_time > (1./ term):
+            initial_flag=True
+            switch=switch*(-1)
+
+
+        #자동범위에서 라바콘 그리기
+        if auto_range==1:
+            if len(idxs)>0:
+                for i in idxs.flatten():
+                    box=boxes[i]
+                    left=box[0]
+                    top=box[1]
+                    w=box[2]
+                    h=box[3]
+                    cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
+
+        #사람들 사각형 바운더리 그리기, 항상 전체모니터링 함.
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+            frame = drawing(frame, idxs, boxes, term, (0,0), (640,480),0,0)
+        
+        #헬멧 사각형 바운더리 그리기
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+            frame, nohelmet_count = drawing(frame, idxs_h, boxes_h, term, (0,0), (640,480),1,names_h)
+
+        cv2.imshow('frame', frame)
+
+        keycode=cv2.waitKey(25)
+        if keycode == 27:#esc키 종료
+            break
+        elif keycode == ord('u'):# 사용자 지정 범위 끄기
+            user_flag=-1
+        elif keycode == ord('r'):# 디폴트화면 리셋
+            fgbg=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=250,detectShadows=False)
+    cap.release()
+    cv2.destroyAllWindows()
+    root.deiconify()#인터페이스 다시 등장
+
+def workers_counts_stockpiled_helmet_monitoring(num,term,auto_range,sample_video):
+    # 비디오 업로드
+    if sample_video==1:
+        cap = cv2.VideoCapture('videos/allforone.mp4')
+    else:
+        cap = cv2.VideoCapture(0)
+    
+    fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
+
+    root.withdraw()#인터페이스 숨기기
+    #isDragging => 마우스를 드래그 중인가
+    #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
+    #prev_time => yolo term 관련
+    #initial_flag => initial_flag가 1일 때만 욜로를 진행한다. yolo term과 관련됨.
+    #usef_flag => 1이면 사용자지정범위가 켜진다.
+    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
+    people_count=0
+    offlimit=0
+    auto_range_on=0#auto_range하고 있는 중인가?
+    auto_range_on_count=0#auto_range하고 얼마나 욜로에 진입했나?
+    blue_counts=0
+    red_counts=0
+    objects = {}
+    objects_duration = {}
+    first_boundary_made=0#자동혹은 수동 범위 확정에서 최초로 경계를 그릴때, fgbg를 초기화 하기 위한 변수
+    switch=-1#한번은 coco 한번은 helmet 번갈아가면서 yolo 하기 위한 변수
+    idxs=[]
+    idxs_h=[]
+    boxes=[]
+    boxes_h=[]
+    names_h=[]
+    nohelmet_count=0
+
+    while True:
+        #사용자 지정 범위의 변수선언
+        pt1=(x0_m,y0_m)
+        pt2=(x0_m+w_m,y0_m+h_m)
+        
+        #비디오캡쳐
+        ret, frame = cap.read()
+        #비디오 없으면 종료
+        if not ret:
+            break
+        #비디오 사이즈 재조정
+        frame = cv2.resize(frame, (640, 480))
+
+        current_time = time.time()
+
+        #자동범위조정 설정시 사용자 지정범위 끄기=> 나중에 다시 켜야함.
+        if auto_range==1:
+            auto_range_on=1
+            user_flag=-1#사용자지정범위 끄기
+
+        #사용자 지정 범위 
+        cv2.imshow('frame', frame)
+        cv2.setMouseCallback('frame', onMouse)
+        #모니터링 바운더리 사각형 그려지는 곳-욜로수행범위를 실질적으로 제한하는 것은 pt1 pt2의 변경
+        if w_m>0 and h_m>0 and user_flag==1:
+            if w_m<100 or h_m<100: # 작은 사각형은 다른 색 사용
+                cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
+            else:
+                cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+                first_boundary_made=1
+            if isDragging==False and (w_m<100 or h_m<100): # 최종적으로 너무 작은 상자가 그려지면 지워짐
+                first_boundary_made=0
+                w_m=0
+                h_m=0
+        
+        #자동범위 확정적 그리기
+        if auto_range_on!=1 and user_flag!=1:#자동범위 실행중에는 그리지 않음
+            cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+            if first_boundary_made==1:#경계가 최초로 확정된 때에는 fgbg를 초기화
+                first_boundary_made=0
+                fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
+
+        #yolo term 조절, yolo 진입, auto_range도 여기서 진입
+        if initial_flag==True:
+            prev_time = time.time()
+            
+            #자동 범위 조정 메인
+            if auto_range==1 and auto_range_on==1:
+                idxs, boxes=auto_boundary(frame)
+                auto_range_on_count+=1
+                if auto_range_on_count==(term*10):#10초동안 진행
+                    auto_range_on=0#auto range종료
+                    auto_range=0
+                    #pt1과 pt2를 지정하면, 그곳에서만 욜로 수행, 그를 위해서 x0_m,y0_m,w_m,h_m 조정
+                  
+                    if len(auto_boundary_tops)>=6:
+                        x0_m=auto_range_filter(auto_boundary_lefts,0,term)
+                        y0_m=auto_range_filter(auto_boundary_tops,0,term)
+                        w_m=auto_range_filter(auto_boundary_rights,1,term)-auto_range_filter(auto_boundary_lefts,0,term)
+                        h_m=auto_range_filter(auto_boundary_bottoms,1,term)-auto_range_filter(auto_boundary_tops,0,term)
+                        pt1=(x0_m,y0_m)
+                        pt2=(x0_m+w_m,y0_m+h_m)
+                    elif 0<len(auto_boundary_tops)<6:
+                        x0_m=min(auto_boundary_lefts)
+                        w_m=max(auto_boundary_rights)-min(auto_boundary_lefts)
+                        y0_m=0
+                        h_m=480
+                        pt1=(x0_m,y0_m)
+                        pt2=(x0_m+w_m,y0_m+h_m)
+                    else:
+                        pass # 자동범위 조정 실패 문구
+                    first_boundary_made=1
+            
+            #욜로 사람수 세기 메인
+            if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==-1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, pt1, pt2)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, pt1, pt2)
+                else:
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, (0,0), (640,480))
+            initial_flag=False
+            #헬멧 모니터링
+            if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
+                else:
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, (0,0), (640,480),0)
+            initial_flag=False
+        
+        #적치물제한 감시 부분 - 텀 조절 없이 실시간으로 하도록 함
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    frame, objects, objects_duration, blue_counts,red_counts=stockpiled_monitoring_core(fgbg,current_time,objects,objects_duration,frame,pt1,pt2)
+                    people_count=len(idxs)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    frame, objects, objects_duration, blue_counts,red_counts=stockpiled_monitoring_core(fgbg,current_time,objects,objects_duration,frame,pt1,pt2)
+                    people_count=len(idxs)
+
+        #적치물 확인 및 경고
+        if blue_counts>0 and auto_range!=1:
+            frame=draw_caution(frame, 0,6)
+
+        #사람수 표시는 항상 그린다.
+        #사람수 text배경 -검은색
+        if auto_range!=1:
+            cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
+            cv2.putText(frame, 'Allocated : {} Count : {}'.format(num,people_count), count_cor, font, 
+                        count_font_scale, count_color, count_thickness, cv2.LINE_AA)
+        else:#자동 범위 설정중일 경우
+            cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
+            cv2.putText(frame, 'Detecting Traffic cone', count_cor, font, 
+                        count_font_scale, count_color, count_thickness, cv2.LINE_AA)
+        
+        #사람수 확인 및 경고 표현
+        if people_count<num and auto_range!=1:
+            frame=draw_caution(frame, idxs,2)
+
+        #헬멧 확인 경고
+        if len(idxs_h)>0 and nohelmet_count>0 and auto_range!=1:
+            frame=draw_caution(frame, idxs_h,8)
+
+        #YOLO텀 조절용2
+        lapsed_time = time.time() - prev_time
+        if lapsed_time > (1./ term):
+            initial_flag=True
+            switch=switch*(-1)
+
+
+        #자동범위에서 라바콘 그리기
+        if auto_range==1:
+            if len(idxs)>0:
+                for i in idxs.flatten():
+                    box=boxes[i]
+                    left=box[0]
+                    top=box[1]
+                    w=box[2]
+                    h=box[3]
+                    cv2.rectangle(frame, (left, top), (left+w, top+h), (0, 255, 0), 2)
+
+        #사람들 사각형 바운더리 그리기, 항상 전체모니터링 함.
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+            frame = drawing(frame, idxs, boxes, term, (0,0), (640,480),0,0)
+        
+        #헬멧 사각형 바운더리 그리기
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에그리고 사각형이 그려지는 동안에 사람 바운더리 그리지 않음
+            frame, nohelmet_count = drawing(frame, idxs_h, boxes_h, term, (0,0), (640,480),1,names_h)
+
+        cv2.imshow('frame', frame)
+
+        keycode=cv2.waitKey(25)
+        if keycode == 27:#esc키 종료
+            break
+        elif keycode == ord('u'):# 사용자 지정 범위 끄기
+            user_flag=-1
+        elif keycode == ord('r'):# 디폴트화면 리셋
+            fgbg=cv2.createBackgroundSubtractorMOG2(history=500,varThreshold=250,detectShadows=False)
+    cap.release()
+    cv2.destroyAllWindows()
+    root.deiconify()#인터페이스 다시 등장
+
+def off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sample_video):
+    # 비디오 업로드
+    if sample_video==1:
+        cap = cv2.VideoCapture('videos/allforone.mp4')
+    else:
+        cap = cv2.VideoCapture(0)
+    
+    fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
+
+    root.withdraw()#인터페이스 숨기기
+    #isDragging => 마우스를 드래그 중인가
+    #x0_m, y0_m, w_m, h_m => 마우스로 그린 사각형 좌표
+    #prev_time => yolo term 관련
+    #initial_flag => initial_flag가 1일 때만 욜로를 진행한다. yolo term과 관련됨.
+    #usef_flag => 1이면 사용자지정범위가 켜진다.
+    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
+    people_count=0
+    offlimit=0
+    auto_range_on=0#auto_range하고 있는 중인가?
+    auto_range_on_count=0#auto_range하고 얼마나 욜로에 진입했나?
+    blue_counts=0
+    red_counts=0
+    objects = {}
+    objects_duration = {}
+    first_boundary_made=0#자동혹은 수동 범위 확정에서 최초로 경계를 그릴때, fgbg를 초기화 하기 위한 변수
+    switch=-1#한번은 coco 한번은 helmet 번갈아가면서 yolo 하기 위한 변수
+    idxs=[]
+    idxs_h=[]
+    boxes=[]
+    boxes_h=[]
+    names_h=[]
+    nohelmet_count=0
+    
+    while True:
+        #사용자 지정 범위의 변수선언
+        pt1=(x0_m,y0_m)
+        pt2=(x0_m+w_m,y0_m+h_m)
+        
+        #비디오캡쳐
+        ret, frame = cap.read()
+        #비디오 없으면 종료
+        if not ret:
+            break
+        #비디오 사이즈 재조정
+        frame = cv2.resize(frame, (640, 480))
+
+        current_time = time.time()
+
+        #자동범위조정 설정시 사용자 지정범위 끄기=> 나중에 다시 켜야함.
+        if auto_range==1:
+            auto_range_on=1
+            user_flag=-1#사용자지정범위 끄기
+
+        #사용자 지정 범위 
+        cv2.imshow('frame', frame)
+        cv2.setMouseCallback('frame', onMouse)
+        #모니터링 바운더리 사각형 그려지는 곳-욜로수행범위를 실질적으로 제한하는 것은 pt1 pt2의 변경
+        if w_m>0 and h_m>0 and user_flag==1:
+            if w_m<100 or h_m<100: # 작은 사각형은 다른 색 사용
+                cv2.rectangle(frame, pt1, pt2, (0, 0, 255), 2)
+            else:
+                cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+                first_boundary_made=1
+            if isDragging==False and (w_m<100 or h_m<100): # 최종적으로 너무 작은 상자가 그려지면 지워짐
+                first_boundary_made=0
+                w_m=0
+                h_m=0
+        
+        #자동범위 확정적 그리기
+        if auto_range_on!=1 and user_flag!=1:#자동범위 실행중에는 그리지 않음
+            cv2.rectangle(frame, pt1, pt2, (255, 0, 0), 3)
+            if first_boundary_made==1:#경계가 최초로 확정된 때에는 fgbg를 초기화
+                first_boundary_made=0
+                fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
+
+        #yolo term 조절, yolo 진입, auto_range도 여기서 진입
+        if initial_flag==True:
+            prev_time = time.time()
+            
+            #자동 범위 조정 메인
+            if auto_range==1 and auto_range_on==1:
+                idxs, boxes=auto_boundary(frame)
+                auto_range_on_count+=1
+                if auto_range_on_count==(term*10):#10초동안 진행
+                    auto_range_on=0#auto range종료
+                    auto_range=0
+                    #pt1과 pt2를 지정하면, 그곳에서만 욜로 수행, 그를 위해서 x0_m,y0_m,w_m,h_m 조정
+                  
+                    if len(auto_boundary_tops)>=6:
+                        x0_m=auto_range_filter(auto_boundary_lefts,0,term)
+                        y0_m=auto_range_filter(auto_boundary_tops,0,term)
+                        w_m=auto_range_filter(auto_boundary_rights,1,term)-auto_range_filter(auto_boundary_lefts,0,term)
+                        h_m=auto_range_filter(auto_boundary_bottoms,1,term)-auto_range_filter(auto_boundary_tops,0,term)
+                        pt1=(x0_m,y0_m)
+                        pt2=(x0_m+w_m,y0_m+h_m)
+                    elif 0<len(auto_boundary_tops)<6:
+                        x0_m=min(auto_boundary_lefts)
+                        w_m=max(auto_boundary_rights)-min(auto_boundary_lefts)
+                        y0_m=0
+                        h_m=480
+                        pt1=(x0_m,y0_m)
+                        pt2=(x0_m+w_m,y0_m+h_m)
+                    else:
+                        pass # 자동범위 조정 실패 문구
+                    first_boundary_made=1
+            
+            #욜로 사람수 세기 메인
+            if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==-1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, pt1, pt2)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, pt1, pt2)
+                else:
+                    idxs, boxes, offlimit, people_count  = yolo_seperate(frame, (0,0), (640,480))
+            initial_flag=False
+            #헬멧 모니터링
+            if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, pt1, pt2,1)
+                else:
+                    idxs_h, boxes_h, names_h  = helmet_yolo(frame, (0,0), (640,480),0)
+            initial_flag=False
+        
+        #적치물제한 감시 부분 - 텀 조절 없이 실시간으로 하도록 함
+        if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
+                if user_flag == 1 and w_m>100 and h_m>100:#사용자 범위 설정시 욜로 범위가 너무 작으면 안된다.
+                    frame, objects, objects_duration, blue_counts,red_counts=stockpiled_monitoring_core(fgbg,current_time,objects,objects_duration,frame,pt1,pt2)
+                    people_count=len(idxs)
+                elif len(auto_boundary_tops)>0:#보완이 필요한 부분
+                    frame, objects, objects_duration, blue_counts,red_counts=stockpiled_monitoring_core(fgbg,current_time,objects,objects_duration,frame,pt1,pt2)
+                    people_count=len(idxs)
+
+        #적치물 확인 및 경고
+        if blue_counts>0 and auto_range!=1:
+            frame=draw_caution(frame, 0,6)
+
+        if auto_range==1:#자동 범위 설정중일 경우
+            cv2.rectangle(frame, count_cor_back, count_cor_back2, (0, 0, 0), -1)
+            cv2.putText(frame, 'Detecting Traffic cone', count_cor, font, 
+                        count_font_scale, count_color, count_thickness, cv2.LINE_AA)
+        
+        #접근금지 확인 및 경고 표현
+        if offlimit==1:
+            frame=draw_caution(frame, idxs,7)
+
+        #헬멧 확인 경고
+        if len(idxs_h)>0 and nohelmet_count>0 and auto_range!=1:
+            frame=draw_caution(frame, idxs_h,8)
 
         #YOLO텀 조절용2
         lapsed_time = time.time() - prev_time
@@ -1999,13 +2590,13 @@ def main_loop(toggle1, toggle2, toggle3, toggle4,allocated,term,auto_range,sampl
 
     root.withdraw()#인터페이스 숨기기
 
-    if toggle1==1 and toggle2==0 and toggle3==0 and toggle4==0:
+    if toggle1==1 and toggle2==0 and toggle3==0 and toggle4==0:#접근금지 모니터링
         off_limit_monitoring(term,auto_range,sample_video)
-    elif toggle1==0 and toggle2==1 and toggle3==0 and toggle4==0:
+    elif toggle1==0 and toggle2==1 and toggle3==0 and toggle4==0:#작업인원수 모니터링
         workers_counts_monitoring(allocated,term,auto_range,sample_video)#할당인원, term 변수, auto_range여부
-    elif toggle1==0 and toggle2==0 and toggle3==1 and toggle4==0:
+    elif toggle1==0 and toggle2==0 and toggle3==1 and toggle4==0:#적치물제한구역 모니터링
         stockpiled_monitoring(term, auto_range,sample_video)
-    elif toggle1==0 and toggle2==0 and toggle3==0 and toggle4==1:
+    elif toggle1==0 and toggle2==0 and toggle3==0 and toggle4==1:#안전모착용 모니터링
         helmet_monitoring(term,auto_range,sample_video)
     elif toggle1==1 and toggle2==0 and toggle3==1 and toggle4==0:#접근금지+적치물제한
         stockpiled_offlimit_monitoring(term, auto_range,sample_video)
@@ -2017,6 +2608,12 @@ def main_loop(toggle1, toggle2, toggle3, toggle4,allocated,term,auto_range,sampl
         workers_counts_off_limit_stockpiled_monitoring(allocated,term,auto_range,sample_video)
     elif toggle1==1 and toggle2==1 and toggle3==1 and toggle4==1:#적치물제한+접근금지+작업인원수제한+안전모 
         workers_counts_off_limit_stockpiled_helmet_monitoring(allocated,term,auto_range,sample_video)
+    elif toggle1==1 and toggle2==1 and toggle3==0 and toggle4==1:#접근금지+작업인원수제한+안전모 모니터링
+        workers_counts_off_limit_helmet_monitoring(allocated,term,auto_range,sample_video)
+    elif toggle1==0 and toggle2==1 and toggle3==1 and toggle4==1:#적치물제한+작업인원수제한+안전모 모니터링
+        workers_counts_stockpiled_helmet_monitoring(allocated,term,auto_range,sample_video)
+    elif toggle1==1 and toggle2==0 and toggle3==1 and toggle4==1:#적치물제한+접근금지+안전모 모니터링
+        off_limit_stockpiled_helmet_monitoring(allocated,term,auto_range,sample_video)
 
     root.deiconify()#인터페이스 다시 등장
     
