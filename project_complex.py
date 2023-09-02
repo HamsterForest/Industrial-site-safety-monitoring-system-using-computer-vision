@@ -2384,7 +2384,7 @@ def workers_counts_stockpiled_helmet_monitoring(num,term,auto_range,sample_video
     cv2.destroyAllWindows()
     root.deiconify()#인터페이스 다시 등장
 
-def off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sample_video):
+def off_limit_stockpiled_helmet_monitoring(term,auto_range,sample_video):
     # 비디오 업로드
     if sample_video==1:
         cap = cv2.VideoCapture('videos/allforone.mp4')
@@ -2574,7 +2574,7 @@ def off_limit_stockpiled_helmet_monitoring(num,term,auto_range,sample_video):
     cv2.destroyAllWindows()
     root.deiconify()#인터페이스 다시 등장
 
-def off_limit_helmet_monitoring(num,term,auto_range,sample_video):
+def off_limit_helmet_monitoring(term,auto_range,sample_video):
     # 비디오 업로드
     if sample_video==1:
         cap = cv2.VideoCapture('videos/allforone.mp4')
@@ -2751,7 +2751,7 @@ def off_limit_helmet_monitoring(num,term,auto_range,sample_video):
     cv2.destroyAllWindows()
     root.deiconify()#인터페이스 다시 등장
 
-def stockpiled_helmet_monitoring(num,term,auto_range,sample_video):
+def stockpiled_helmet_monitoring(term,auto_range,sample_video):
     # 비디오 업로드
     if sample_video==1:
         cap = cv2.VideoCapture('videos/allforone.mp4')
@@ -3150,11 +3150,11 @@ def main_loop(toggle1, toggle2, toggle3, toggle4,allocated,term,auto_range,sampl
     elif toggle1==0 and toggle2==1 and toggle3==1 and toggle4==1:#적치물제한+작업인원수제한+안전모 모니터링
         workers_counts_stockpiled_helmet_monitoring(allocated,term,auto_range,sample_video)
     elif toggle1==1 and toggle2==0 and toggle3==1 and toggle4==1:#적치물제한+접근금지+안전모 모니터링
-        off_limit_stockpiled_helmet_monitoring(allocated,term,auto_range,sample_video)
+        off_limit_stockpiled_helmet_monitoring(term,auto_range,sample_video)
     elif toggle1==1 and toggle2==0 and toggle3==0 and toggle4==1:#접근금지+안전모 모니터링
-        off_limit_helmet_monitoring(allocated,term,auto_range,sample_video)
+        off_limit_helmet_monitoring(term,auto_range,sample_video)
     elif toggle1==0 and toggle2==0 and toggle3==1 and toggle4==1:#적치물제한+안전모 모니터링
-        stockpiled_helmet_monitoring(allocated,term,auto_range,sample_video)
+        stockpiled_helmet_monitoring(term,auto_range,sample_video)
     elif toggle1==0 and toggle2==1 and toggle3==0 and toggle4==1:#작업인원수+안전모 모니터링
         workers_counts_helmet_monitoring(allocated,term,auto_range,sample_video)
 
