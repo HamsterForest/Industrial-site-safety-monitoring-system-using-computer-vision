@@ -49,6 +49,9 @@ with open("weight_files_folder/helmet/obj.names", "r") as f:#.namses => 알고�
 isDragging = False
 x0_m, y0_m, w_m, h_m = -1, -1, -1, -1
 
+#블롭 사이즈 전역변수
+blob_size=320
+
 #자동범위조정을 위한 것
 auto_boundary_tops=[]
 auto_boundary_bottoms=[]
@@ -158,6 +161,7 @@ def onMouse(event, x, y, flags, param):
 
 #헬멧 감지 욜로
 def helmet_yolo(frame, pt1, pt2, mod):
+    global blob_size
     #지정된 사이즈로 프레임 자르기
     if mod==0:#지정된 범위 안에만 감지
         frame = cut_frame(frame, pt1, pt2)
@@ -169,7 +173,7 @@ def helmet_yolo(frame, pt1, pt2, mod):
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
     # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
-    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(416, 416), 
+    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(blob_size, blob_size), 
                                  mean=(0, 0, 0), swapRB=True, crop=False)
     net_h.setInput(blob)
     outputs = net_h.forward(output_layers_h)
@@ -199,13 +203,14 @@ def helmet_yolo(frame, pt1, pt2, mod):
 
 #사람 감지 욜로
 def yolo(frame, pt1, pt2):
+    global blob_size
     #지정된 사이즈로 프레임 자르기
     frame = cut_frame(frame, pt1, pt2)
     
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
     # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
-    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(320, 320), 
+    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(blob_size, blob_size), 
                                  mean=(0, 0, 0), swapRB=True, crop=False)
     net.setInput(blob)
     outputs = net.forward(output_layers)
@@ -330,12 +335,12 @@ def auto_boundary(frame):
     #yolo term 기능과 연동되게 할것
     #바운더리사각형을 반환할것
 
-    global auto_boundary_tops, auto_boundary_bottoms, auto_boundary_lefts, auto_boundary_rights
+    global auto_boundary_tops, auto_boundary_bottoms, auto_boundary_lefts, auto_boundary_rights, blob_size
 
     # 이미지를 그대로 넣는 것이 아니라, blob으로 넣게 된다.
     # blob은 이미지의 픽셀정보와 크기정보, 색의 채널 정보들을 가지는 행렬의 형태이다.
     # blop의 사이즈가 클수록 accuracy가 높아지지만 연산 시간이 늘어나게 된다.
-    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(416, 416), 
+    blob = cv2.dnn.blobFromImage(frame, scalefactor=1/255, size=(blob_size, blob_size), 
                                  mean=(0, 0, 0), swapRB=True, crop=False)
     net_t.setInput(blob)
     outputs = net_t.forward(output_layers_t)
@@ -2931,11 +2936,9 @@ def stockpiled_helmet_monitoring(term,auto_range,sample_video):
 def workers_counts_helmet_monitoring(num,term,auto_range,sample_video):
     # 비디오 업로드
     if sample_video==1:
-        cap = cv2.VideoCapture('videos/allforone.mp4')
+        cap = cv2.VideoCapture('videos/allforone2.mp4')
     else:
         cap = cv2.VideoCapture(0)
-    
-    fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=250, detectShadows=False)
 
     root.withdraw()#인터페이스 숨기기
     #isDragging => 마우스를 드래그 중인가
@@ -2945,13 +2948,8 @@ def workers_counts_helmet_monitoring(num,term,auto_range,sample_video):
     #usef_flag => 1이면 사용자지정범위가 켜진다.
     global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag
     people_count=0
-    offlimit=0
     auto_range_on=0#auto_range하고 있는 중인가?
     auto_range_on_count=0#auto_range하고 얼마나 욜로에 진입했나?
-    blue_counts=0
-    red_counts=0
-    objects = {}
-    objects_duration = {}
     first_boundary_made=0#자동혹은 수동 범위 확정에서 최초로 경계를 그릴때, fgbg를 초기화 하기 위한 변수
     switch=-1#한번은 coco 한번은 helmet 번갈아가면서 yolo 하기 위한 변수
     idxs=[]
@@ -2973,8 +2971,6 @@ def workers_counts_helmet_monitoring(num,term,auto_range,sample_video):
             break
         #비디오 사이즈 재조정
         frame = cv2.resize(frame, (640, 480))
-
-        current_time = time.time()
 
         #자동범위조정 설정시 사용자 지정범위 끄기=> 나중에 다시 켜야함.
         if auto_range==1:
@@ -3042,6 +3038,7 @@ def workers_counts_helmet_monitoring(num,term,auto_range,sample_video):
                     idxs, boxes  = yolo(frame, pt1, pt2)
                 else:
                     idxs, boxes  = yolo(frame, (0,0), (640,480))
+                people_count=len(idxs)
             initial_flag=False
             #헬멧 모니터링
             if (isDragging==False or( isDragging==True and (w_m<0 and h_m<0))) and auto_range!=1 and switch==1:# 드래그 하는 동안에 그리고 사각형이 그려지는 동안에는 욜로하지 않음
@@ -3112,8 +3109,8 @@ def workers_counts_helmet_monitoring(num,term,auto_range,sample_video):
     root.deiconify()#인터페이스 다시 등장
 
 #메인루프
-def main_loop(toggle1, toggle2, toggle3, toggle4,allocated,term,auto_range,sample_video):
-    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag,auto_boundary_tops, auto_boundary_bottoms, auto_boundary_lefts, auto_boundary_rights
+def main_loop(toggle1, toggle2, toggle3, toggle4,allocated,term,auto_range,sample_video,blobsize):
+    global isDragging, x0_m, y0_m, w_m, h_m, prev_time, initial_flag, user_flag,auto_boundary_tops, auto_boundary_bottoms, auto_boundary_lefts, auto_boundary_rights, blob_size
     #전역변수 초기화
     isDragging = False
     x0_m, y0_m, w_m, h_m = -1, -1, -1, -1
@@ -3124,6 +3121,7 @@ def main_loop(toggle1, toggle2, toggle3, toggle4,allocated,term,auto_range,sampl
     auto_boundary_bottoms=[]
     auto_boundary_lefts=[]
     auto_boundary_rights=[]
+    blob_size=blobsize
 
     root.withdraw()#인터페이스 숨기기
 
@@ -3204,15 +3202,20 @@ toggle_check5.place(x=210, y=128)
 tk.Label(root,text='[부가 기능 설정]').place(x=50, y=168)
 tk.Label(root,text='자동범위설정 기능 사용').place(x=50, y=190)
 toggle_var6 = tk.IntVar()
-toggle_var6.set(0)
+toggle_var6.set(1)
 toggle_check6 = tk.Checkbutton(root,variable=toggle_var6)
 toggle_check6.place(x=210, y=188)
 tk.Label(root,text='모니터링 빈도 : ').place(x=50, y=230)
 scale2 = tk.Scale(root, from_=1, to=60,orient="horizontal", length=300)
-scale2.set(3)
+scale2.set(1)
 scale2.place(x=160, y=210,)
 
-button1 = tk.Button(root, text="모니터링 시작",command=lambda : main_loop(toggle_var2.get(),toggle_var3.get(),toggle_var4.get(),toggle_var5.get(),scale1.get(),scale2.get(),toggle_var6.get(),toggle_var1.get()))
+tk.Label(root,text='YOLO 이미지 사이즈 : ').place(x=50, y=280)
+scale3 = tk.Scale(root, from_=32, to=608,orient="horizontal", length=300, resolution=32)
+scale3.set(320)
+scale3.place(x=180, y=260,)
+
+button1 = tk.Button(root, text="모니터링 시작",command=lambda : main_loop(toggle_var2.get(),toggle_var3.get(),toggle_var4.get(),toggle_var5.get(),scale1.get(),scale2.get(),toggle_var6.get(),toggle_var1.get(),scale3.get()))
 button1.place(x=50, y=320, width=250, height=50)
 
 root.mainloop()#인터페이스 실행
